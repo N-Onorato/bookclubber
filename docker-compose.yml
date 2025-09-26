@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  bookclub:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - SESSION_SECRET=your-session-secret-change-this
+      - DATABASE_PATH=/app/data/bookclub.db
+    restart: unless-stopped
+
+volumes:
+  data:
