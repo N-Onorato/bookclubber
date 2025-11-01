@@ -1,26 +1,37 @@
 # Book Club Platform
 
-A web-based platform for managing a small book club (8 users max) with automated book suggestions, voting, reading schedules, and member management. Built to reduce administrative burden while enhancing the member experience.
+A web-based platform for managing a small book club (8 users max) with automated
+book suggestions, voting, reading schedules, and member management. Built to
+reduce administrative burden while enhancing the member experience.
 
 ## 📖 Product Vision
 
-This platform automates the repetitive administrative tasks of running a book club while preserving the social aspects that make book clubs great. It eliminates manual Google Forms, spreadsheet tracking, and Discord channel setup, reducing admin time from 45+ minutes per book cycle to under 5 minutes.
+This platform automates the repetitive administrative tasks of running a book
+club while preserving the social aspects that make book clubs great. It
+eliminates manual Google Forms, spreadsheet tracking, and Discord channel setup,
+reducing admin time from 45+ minutes per book cycle to under 5 minutes.
 
-See [book-club-product-spec.md](book-club-product-spec.md) for complete product requirements and roadmap.
+See [book-club-product-spec.md](book-club-product-spec.md) for complete product
+requirements and roadmap.
 
 ## ✨ Feature Status
 
 ### Phase 1: MVP Features (In Progress)
 
 #### ✅ Completed
-- **Database Schema**: Complete schema with UUID-based tables for users, books, cycles, suggestions, votes, reading chunks, meetings, and more
-- **Authentication Foundation**: Session-based auth infrastructure with bcrypt password hashing
-- **Type Definitions**: Comprehensive TypeScript types for all entities and API requests
+
+- **Database Schema**: Complete schema with UUID-based tables for users, books,
+  cycles, suggestions, votes, reading chunks, meetings, and more
+- **Authentication Foundation**: Session-based auth infrastructure with bcrypt
+  password hashing
+- **Type Definitions**: Comprehensive TypeScript types for all entities and API
+  requests
 
 #### 🚧 In Development
+
 - **Book Suggestion System**
   - [ ] Max 3 suggestions per person per cycle
-  - [ ] Open Library API integration for metadata
+  - [x] Open Library API integration for metadata
   - [ ] Series detection and warnings
   - [ ] Author blocklist validation
   - [ ] Release date validation
@@ -52,8 +63,10 @@ See [book-club-product-spec.md](book-club-product-spec.md) for complete product 
 
 ### Phase 2: Enhancement Features (Planned)
 
-- **Hall of Fame / Tier List System**: S/A/B/C/D/F rankings with livestream party support
-- **Book History & Analytics**: Reading patterns, suggester statistics, genre distribution
+- **Hall of Fame / Tier List System**: S/A/B/C/D/F rankings with livestream
+  party support
+- **Book History & Analytics**: Reading patterns, suggester statistics, genre
+  distribution
 - **Notification System**: Discord webhooks, email notifications, in-app alerts
 
 ### Phase 3: Scaling Features (Future)
@@ -126,13 +139,13 @@ See [book-club-product-spec.md](book-club-product-spec.md) for complete product 
    docker-compose up --build
    ```
 
-2. **Production Environment Variables**
-   Update `docker-compose.yml` with secure values:
+2. **Production Environment Variables** Update `docker-compose.yml` with secure
+   values:
    ```yaml
    environment:
-     - NODE_ENV=production
-     - SESSION_SECRET=your-secure-session-secret-here
-     - DATABASE_PATH=/app/data/bookclub.db
+      - NODE_ENV=production
+      - SESSION_SECRET=your-secure-session-secret-here
+      - DATABASE_PATH=/app/data/bookclub.db
    ```
 
 ## 📁 Project Structure
@@ -189,6 +202,7 @@ NODE_ENV=development
 The application uses SQLite with a comprehensive schema including:
 
 **Core Tables:**
+
 - `users` - User accounts with UUID primary keys
 - `sessions` - User authentication sessions
 - `books` - Book metadata with series tracking and status
@@ -199,13 +213,16 @@ The application uses SQLite with a comprehensive schema including:
 - `meetings` - Meeting scheduling with flexibility
 
 **Feature Tables:**
+
 - `blocked_authors` - Author blocklist for ethical exclusions
 - `themes` - Theme wheel options for suggestion rounds
 
 **Phase 2 Tables:**
+
 - `rankings` - Tier list rankings (S/A/B/C/D/F)
 
 **System Tables:**
+
 - `audit_log` - Audit trail for admin actions
 - `events` - Event queue for future notifications
 
@@ -214,12 +231,14 @@ See [lib/db/schema.sql](lib/db/schema.sql) for complete schema definition.
 ## 👥 User Roles & Permissions
 
 ### Member
+
 - Submit up to 3 book suggestions per cycle
 - Cast up to 3 votes during voting periods
 - View all public club information
 - Participate in tier rankings (Phase 2)
 
 ### Admin
+
 - All member permissions
 - Add/remove club members
 - Edit book metadata and covers
@@ -242,11 +261,13 @@ See [lib/db/schema.sql](lib/db/schema.sql) for complete schema definition.
 ## 📚 API Endpoints
 
 ### Authentication (Implemented)
+
 - `POST /api/auth/login` - User login
 - `POST /api/auth/register` - User registration
 - `POST /api/auth/logout` - User logout
 
 ### Books (Planned)
+
 - `GET /api/books` - List all books (with filters)
 - `GET /api/books/current` - Get current reading book
 - `GET /api/books/[id]` - Get single book
@@ -258,28 +279,33 @@ See [lib/db/schema.sql](lib/db/schema.sql) for complete schema definition.
 - `GET /api/books/metadata?isbn=` - Fetch from Open Library
 
 ### Cycles (Planned)
+
 - `GET /api/cycles/current` - Get active cycle
 - `POST /api/cycles` - Start new cycle (admin)
 - `PUT /api/cycles/[id]/end` - End cycle (admin)
 
 ### Voting (Planned)
+
 - `POST /api/votes` - Cast votes (max 3)
 - `GET /api/votes/results` - Get results (when ended)
 - `GET /api/votes/my-votes` - Get user's votes
 
 ### Schedule (Planned)
+
 - `GET /api/schedule/current` - Current reading schedule
 - `POST /api/schedule` - Generate schedule (admin)
 - `PUT /api/schedule/[id]` - Update schedule chunk (admin)
 - `GET /api/schedule/export` - Discord-formatted export
 
 ### Meetings (Planned)
+
 - `GET /api/meetings` - List meetings
 - `GET /api/meetings/next` - Get next meeting
 - `POST /api/meetings` - Create meeting (admin)
 - `PUT /api/meetings/[id]` - Update meeting (admin)
 
 ### Admin (Planned)
+
 - `GET /api/admin/members` - List members
 - `POST /api/admin/members` - Add member
 - `PUT /api/admin/members/[id]` - Update member role
@@ -325,7 +351,8 @@ See [lib/db/schema.sql](lib/db/schema.sql) for complete schema definition.
 ### Development Tips
 
 - Use `npm run dev` for development with hot reload
-- Database file is stored at `./bookclubber.db` (or path in DATABASE_PATH env var)
+- Database file is stored at `./bookclubber.db` (or path in DATABASE_PATH env
+  var)
 - Check browser dev tools for API errors
 - Use SQLite browser extensions to inspect database
 - See [CLAUDE.md](CLAUDE.md) for development notes and common commands
@@ -358,6 +385,7 @@ docker run -p 3000:3000 \
 ## 📊 Success Metrics
 
 ### Time Savings (Target)
+
 - Suggestion form creation: 30 seconds vs 10+ minutes manually
 - Voting form creation: Automatic vs 15+ minutes manually
 - Reading schedule creation: 2 minutes vs 10+ minutes manually
@@ -375,6 +403,7 @@ docker run -p 3000:3000 \
 ## 🚫 Out of Scope
 
 **Explicitly Not Included:**
+
 - Discussion forums (Discord serves this purpose)
 - Reading progress tracking per member
 - Book purchase/acquisition coordination
@@ -384,14 +413,17 @@ docker run -p 3000:3000 \
 - Mobile native applications
 
 **Preserved External Processes:**
+
 - All book discussions remain on Discord
 - Meeting facilitation stays offline/video
 - Book acquisition is individual responsibility
 
 ## 📖 Documentation
 
-- [book-club-product-spec.md](book-club-product-spec.md) - Complete product requirements and feature roadmap
-- [book-club-technical-spec.md](book-club-technical-spec.md) - Technical architecture and implementation details
+- [book-club-product-spec.md](book-club-product-spec.md) - Complete product
+  requirements and feature roadmap
+- [book-club-technical-spec.md](book-club-technical-spec.md) - Technical
+  architecture and implementation details
 - [CLAUDE.md](CLAUDE.md) - Development notes and common commands
 
 ## 🤝 Contributing
@@ -409,6 +441,7 @@ This project is licensed under the ISC License.
 ## 🆘 Support
 
 For issues and questions:
+
 1. Check the troubleshooting section above
 2. Review the database schema and API documentation
 3. See [CLAUDE.md](CLAUDE.md) for development notes

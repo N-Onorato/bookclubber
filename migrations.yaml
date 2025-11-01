@@ -249,3 +249,31 @@ migrations:
       BEGIN
         UPDATE suggestions SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
       END;
+  - version: 2
+    name: "Add max suggestions and votes per user to cycles"
+    description: "Add max_suggestions_per_user and max_votes_per_user columns to cycles table"
+    reversible: true
+    up: |
+      ALTER TABLE cycles ADD COLUMN max_suggestions_per_user INTEGER DEFAULT 3;
+      ALTER TABLE cycles ADD COLUMN max_votes_per_user INTEGER DEFAULT 3;
+    down: |
+      -- SQLite doesn't support DROP COLUMN, so we need to recreate the table
+      CREATE TABLE cycles_backup (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL CHECK (type IN ('suggestion', 'voting')),
+        theme TEXT,
+        starts_at DATETIME NOT NULL,
+        ends_at DATETIME NOT NULL,
+        is_active BOOLEAN DEFAULT FALSE,
+        winner_book_id TEXT REFERENCES books(id),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      INSERT INTO cycles_backup SELECT id, type, theme, starts_at, ends_at, is_active, winner_book_id, created_at FROM cycles;
+
+      DROP TABLE cycles;
+
+      ALTER TABLE cycles_backup RENAME TO cycles;
+
+      CREATE INDEX idx_cycles_active ON cycles(is_active);
+      CREATE INDEX idx_cycles_type ON cycles(type);

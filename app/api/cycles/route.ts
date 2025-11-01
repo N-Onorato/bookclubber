@@ -31,7 +31,9 @@ export async function POST(request: NextRequest) {
             type,
             startsAt,
             endsAt,
-            theme
+            theme,
+            maxSuggestionsPerUser,
+            maxVotesPerUser
         } = await request.json();
 
         // Validation
@@ -60,11 +62,24 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Validate max values (optional, defaults to 3)
+        const maxSuggestions = maxSuggestionsPerUser ?? 3;
+        const maxVotes = maxVotesPerUser ?? 3;
+
+        if (maxSuggestions < 1 || maxVotes < 1) {
+            return NextResponse.json(
+                { error: 'Max suggestions and votes must be at least 1' },
+                { status: 400 }
+            );
+        }
+
         const cycle = await CycleService.createCycle(
             type,
             start,
             end,
-            theme
+            theme,
+            maxSuggestions,
+            maxVotes
         );
 
         return NextResponse.json({

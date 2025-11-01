@@ -83,3 +83,45 @@ export async function PATCH(
         );
     }
 }
+
+/**
+ * DELETE /api/cycles/[id] - Delete a cycle (admin only)
+ */
+export async function DELETE(
+    request: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        await requireAdmin();
+
+        // Check if cycle exists
+        const cycle = await CycleService.getCycleById(params.id);
+        if (!cycle) {
+            return NextResponse.json(
+                { error: 'Cycle not found' },
+                { status: 404 }
+            );
+        }
+
+        // Delete the cycle (CASCADE will delete suggestions and votes)
+        await CycleService.deleteCycle(params.id);
+
+        return NextResponse.json({
+            success: true,
+            message: 'Cycle deleted successfully'
+        });
+    } catch (error: any) {
+        if (error.message === 'Authentication required' || error.message === 'Admin access required') {
+            return NextResponse.json(
+                { error: error.message },
+                { status: 403 }
+            );
+        }
+
+        console.error('Error deleting cycle:', error);
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        );
+    }
+}

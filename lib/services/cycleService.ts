@@ -10,7 +10,9 @@ export class CycleService {
         type: 'suggestion' | 'voting',
         startsAt: Date,
         endsAt: Date,
-        theme?: string
+        theme?: string,
+        maxSuggestionsPerUser: number = 3,
+        maxVotesPerUser: number = 3
     ): Promise<Cycle> {
         const db = getDatabase();
 
@@ -19,9 +21,10 @@ export class CycleService {
 
         const stmt = db.prepare(`
             INSERT INTO cycles (
-                id, type, theme, starts_at, ends_at, is_active, created_at
+                id, type, theme, starts_at, ends_at, is_active,
+                max_suggestions_per_user, max_votes_per_user, created_at
             )
-            VALUES (?, ?, ?, ?, ?, FALSE, ?)
+            VALUES (?, ?, ?, ?, ?, FALSE, ?, ?, ?)
         `);
 
         stmt.run(
@@ -30,6 +33,8 @@ export class CycleService {
             theme || null,
             startsAt.toISOString(),
             endsAt.toISOString(),
+            maxSuggestionsPerUser,
+            maxVotesPerUser,
             now
         );
 
@@ -167,5 +172,17 @@ export class CycleService {
     static async getCyclesByType(type: 'suggestion' | 'voting'): Promise<Cycle[]> {
         const db = getDatabase();
         return db.prepare('SELECT * FROM cycles WHERE type = ? ORDER BY created_at DESC').all(type) as Cycle[];
+    }
+
+    /**
+     * Delete a cycle and all its dependent data (suggestions, votes)
+     * Note: This uses CASCADE DELETE defined in the schema for suggestions and votes
+     */
+    static async deleteCycle(cycleId: string): Promise<void> {
+        const db = getDatabase();
+
+        // Foreign key constraints with ON DELETE CASCADE will automatically handle
+        // deletion of suggestions and votes
+        db.prepare('DELETE FROM cycles WHERE id = ?').run(cycleId);
     }
 }

@@ -56,6 +56,8 @@ export interface Cycle {
     ends_at: string;
     is_active: boolean;
     winner_book_id?: string;
+    max_suggestions_per_user: number;
+    max_votes_per_user: number;
     created_at: string;
 }
 
@@ -231,6 +233,8 @@ export interface CreateCycleRequest {
     theme?: string;
     starts_at: string;
     ends_at: string;
+    max_suggestions_per_user?: number;
+    max_votes_per_user?: number;
 }
 
 export interface CreateSuggestionRequest {

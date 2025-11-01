@@ -10,6 +10,8 @@ interface Cycle {
     starts_at: string;
     ends_at: string;
     is_active: boolean;
+    max_suggestions_per_user: number;
+    max_votes_per_user: number;
 }
 
 export default function AdminPage() {
@@ -20,7 +22,9 @@ export default function AdminPage() {
         suggestionStart: '',
         votingStart: '',
         votingEnd: '',
-        theme: ''
+        theme: '',
+        maxSuggestionsPerUser: 3,
+        maxVotesPerUser: 3
     });
 
     useEffect(() => {
@@ -45,10 +49,12 @@ export default function AdminPage() {
                 suggestionStart: getDefaultDateTime(0),
                 votingStart: getDefaultDateTime(7),
                 votingEnd: getDefaultDateTime(14),
-                theme: ''
+                theme: '',
+                maxSuggestionsPerUser: 3,
+                maxVotesPerUser: 3
             });
         }
-    }, [showCreateForm]);
+    }, [showCreateForm, formData.suggestionStart]);
 
     const loadCycles = async () => {
         try {
@@ -76,7 +82,9 @@ export default function AdminPage() {
                     type: 'suggestion',
                     startsAt: formData.suggestionStart,
                     endsAt: formData.votingStart,
-                    theme: formData.theme || undefined
+                    theme: formData.theme || undefined,
+                    maxSuggestionsPerUser: formData.maxSuggestionsPerUser,
+                    maxVotesPerUser: formData.maxVotesPerUser
                 })
             });
 
@@ -94,7 +102,9 @@ export default function AdminPage() {
                     type: 'voting',
                     startsAt: formData.votingStart,
                     endsAt: formData.votingEnd,
-                    theme: formData.theme || undefined
+                    theme: formData.theme || undefined,
+                    maxSuggestionsPerUser: formData.maxSuggestionsPerUser,
+                    maxVotesPerUser: formData.maxVotesPerUser
                 })
             });
 
@@ -110,12 +120,36 @@ export default function AdminPage() {
                 suggestionStart: '',
                 votingStart: '',
                 votingEnd: '',
-                theme: ''
+                theme: '',
+                maxSuggestionsPerUser: 3,
+                maxVotesPerUser: 3
             });
             loadCycles();
         } catch (error) {
             console.error('Error creating cycles:', error);
             alert('Failed to create cycles');
+        }
+    };
+
+    const handleDeleteCycle = async (cycleId: string, cycleType: string) => {
+        if (!confirm(`Are you sure you want to delete this ${cycleType} cycle? This will also delete all associated suggestions and votes.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/cycles/${cycleId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                loadCycles();
+            } else {
+                const data = await response.json();
+                alert(`Error deleting cycle: ${data.error}`);
+            }
+        } catch (error) {
+            console.error('Error deleting cycle:', error);
+            alert('Failed to delete cycle');
         }
     };
 
@@ -188,7 +222,7 @@ export default function AdminPage() {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label className="block text-foreground/70 text-sm mb-2">
-                                        📚 Suggestions Start
+                                        Suggestions Start
                                     </label>
                                     <input
                                         type="datetime-local"
@@ -201,7 +235,7 @@ export default function AdminPage() {
 
                                 <div>
                                     <label className="block text-foreground/70 text-sm mb-2">
-                                        🗳️ Voting Starts
+                                        Voting Starts
                                     </label>
                                     <input
                                         type="datetime-local"
@@ -214,12 +248,44 @@ export default function AdminPage() {
 
                                 <div>
                                     <label className="block text-foreground/70 text-sm mb-2">
-                                        ✅ Voting Ends
+                                        Voting Ends
                                     </label>
                                     <input
                                         type="datetime-local"
                                         value={formData.votingEnd}
                                         onChange={(e) => setFormData({ ...formData, votingEnd: e.target.value })}
+                                        className="w-full px-4 py-2 bg-[#18181B]/40 border border-[#27272A] rounded-lg text-foreground focus:outline-none focus:border-accent"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-foreground/70 text-sm mb-2">
+                                        Max Suggestions Per User
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="10"
+                                        value={formData.maxSuggestionsPerUser}
+                                        onChange={(e) => setFormData({ ...formData, maxSuggestionsPerUser: parseInt(e.target.value) || 3 })}
+                                        className="w-full px-4 py-2 bg-[#18181B]/40 border border-[#27272A] rounded-lg text-foreground focus:outline-none focus:border-accent"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-foreground/70 text-sm mb-2">
+                                        Max Votes Per User
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="10"
+                                        value={formData.maxVotesPerUser}
+                                        onChange={(e) => setFormData({ ...formData, maxVotesPerUser: parseInt(e.target.value) || 3 })}
                                         className="w-full px-4 py-2 bg-[#18181B]/40 border border-[#27272A] rounded-lg text-foreground focus:outline-none focus:border-accent"
                                         required
                                     />
@@ -256,7 +322,6 @@ export default function AdminPage() {
                     <div className="space-y-4">
                         {cycles.map((cycle) => {
                             const isActive = isCycleCurrentlyActive(cycle);
-                            const hasStarted = new Date() >= new Date(cycle.starts_at);
                             const hasEnded = new Date() > new Date(cycle.ends_at);
 
                             return (
@@ -265,8 +330,8 @@ export default function AdminPage() {
                                     className="p-6 bg-[#18181B]/60 backdrop-blur-lg rounded-2xl border border-[#27272A]"
                                 >
                                     <div className="flex justify-between items-start mb-4">
-                                        <div>
-                                            <div className="flex items-center gap-3">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-3 mb-2">
                                                 <h3 className="text-xl font-serif font-semibold text-foreground">
                                                     {cycle.type === 'suggestion' ? '📚 Suggestion' : '🗳️ Voting'} Cycle
                                                 </h3>
@@ -279,12 +344,18 @@ export default function AdminPage() {
                                                 </span>
                                             </div>
                                             {cycle.theme && (
-                                                <p className="text-foreground/60 text-sm mt-1">Theme: {cycle.theme}</p>
+                                                <p className="text-foreground/60 text-sm">Theme: {cycle.theme}</p>
                                             )}
                                         </div>
+                                        <button
+                                            onClick={() => handleDeleteCycle(cycle.id, cycle.type)}
+                                            className="ml-4 px-3 py-1 text-sm bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 hover:bg-red-500/30 transition-colors"
+                                        >
+                                            Delete
+                                        </button>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4 text-sm text-foreground/60">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-foreground/60">
                                         <div>
                                             <div className="font-medium">Starts</div>
                                             <div>{new Date(cycle.starts_at).toLocaleString()}</div>
@@ -292,6 +363,14 @@ export default function AdminPage() {
                                         <div>
                                             <div className="font-medium">Ends</div>
                                             <div>{new Date(cycle.ends_at).toLocaleString()}</div>
+                                        </div>
+                                        <div>
+                                            <div className="font-medium">Max Suggestions</div>
+                                            <div>{cycle.max_suggestions_per_user} per user</div>
+                                        </div>
+                                        <div>
+                                            <div className="font-medium">Max Votes</div>
+                                            <div>{cycle.max_votes_per_user} per user</div>
                                         </div>
                                     </div>
                                 </div>
