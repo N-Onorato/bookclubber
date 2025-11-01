@@ -1,22 +1,36 @@
-# Book Club Platform - Development Documentation
-
-This file tracks important implementation details, commands, and file locations
-for development with Claude.
-
 # Auto-Documentation Note
 
 **For Claude:** When making significant architectural changes or discovering
 important patterns/gotchas, automatically update this CLAUDE.md file with:
 
 1. Relevant implementation notes
-2. Key files and their purposes
+2. High value files and their purposes
 3. Important patterns or conventions discovered
 4. Common mistakes to avoid (like the getInstance() issue)
-5. Update the "Recent Updates" section with dated entries
-6. **Important**: This file takes up context space. Limit it to ~350 lines and
-   refactor as needed.
+5. **Important**: This file takes up context space. Limit it to 350 lines and
+   compact as needed.
 
-## Recent Updates (2025-11-01)
+#### Database Workflow:
+
+**For Production:**
+
+```bash
+npm run db:init  # Runs migrations + seeds admin user only
+```
+
+**For Development:**
+
+```bash
+npm run db:init  # Migrations + admin user
+npm run db:seed  # Add sample users + themes (optional)
+```
+
+**Migration Details:**
+
+- `db:init` now calls `db:migrate` first (via execSync)
+- Then seeds the admin user if database is empty
+- `db:seed` adds additional sample data for development
+- Migrations are the single source of truth for schema
 
 ### Schema Alignment and Migration Fixes
 
@@ -36,26 +50,6 @@ prevent future issues.
 3. **Missing columns in books table**
    - **Migration v2**: Added generic `source` and `source_id` columns for
      external book tracking
-
-#### New Documentation:
-
-Created [SCHEMA_ALIGNMENT.md](SCHEMA_ALIGNMENT.md) with:
-
-- Root cause analysis of schema mismatches
-- Comprehensive checklist for creating migrations
-- Guidelines for writing service layer code
-- Database configuration best practices
-- Quick reference commands
-- Prevention strategies
-
-#### Current Migration Status:
-
-- ✅ v1: Initial schema (all tables)
-- ✅ v2: Generic book source tracking
-- ✅ v3: Suggestion reasons
-- ✅ v4: Suggestion updated_at timestamp
-
-**Important**: Always restart dev server after applying migrations!
 
 ### Book Suggestion System Implementation
 
@@ -128,7 +122,6 @@ Implemented complete book suggestion workflow with Open Library integration.
 
 4. **Workflow**
    - Admin creates a cycle with suggestion and voting dates
-   - Admin activates the cycle
    - Users search for books via Open Library integration
    - Users submit up to max suggestions per cycle
    - Books are automatically added to local database
@@ -170,21 +163,9 @@ cookies.
 
 ## Recent Updates (2025-10-31)
 
-### Database Schema Migration
+### Database Schema
 
-Successfully migrated from initial MVP schema to comprehensive spec-compliant
-schema.
-
-#### Key Changes Made:
-
-1. **Updated Technical Specification**
-   ([book-club-technical-spec.md](book-club-technical-spec.md))
-   - Changed from Prisma/Drizzle ORM to raw SQLite with custom service layer
-   - Updated authentication from NextAuth.js/Clerk to custom session-based auth
-   - Confirmed Tailwind CSS as styling solution
-   - Updated environment variables to match implementation
-
-2. **Database Schema Overhaul** ([lib/db/schema.sql](lib/db/schema.sql))
+1. **Database Schema Overhaul** ([lib/db/schema.sql](lib/db/schema.sql))
    - Changed from INTEGER autoincrement IDs to TEXT UUIDs
    - Changed from first_name/last_name to single name field
    - Added comprehensive tables:
@@ -202,12 +183,12 @@ schema.
    - Added comprehensive indexes for performance
    - Added triggers for auto-updating timestamps
 
-3. **Migration System** ([migrations.yaml](migrations.yaml))
+2. **Migration System** ([migrations.yaml](migrations.yaml))
    - Using `@cytoplum/numtwo` for database migrations
    - Replaced initial migration with comprehensive schema
    - Migration is reversible with proper down migration
 
-4. **Type Definitions** ([lib/types.ts](lib/types.ts))
+3. **Type Definitions** ([lib/types.ts](lib/types.ts))
    - Updated all interfaces to match new schema
    - Changed IDs from number to string (UUIDs)
    - Added new types for Cycle, ReadingChunk, Meeting, BlockedAuthor, Theme,
@@ -215,12 +196,12 @@ schema.
    - Added extended types with relations
    - Added request/response types for API endpoints
 
-5. **Database Service** ([lib/db/connection.ts](lib/db/connection.ts))
+4. **Database Service** ([lib/db/connection.ts](lib/db/connection.ts))
    - Added foreign key enforcement
    - Added transaction support method
    - Added cache clearing capability
 
-6. **Database Initialization** ([lib/db/init.ts](lib/db/init.ts))
+5. **Database Initialization** ([lib/db/init.ts](lib/db/init.ts))
    - Updated to use UUIDs for user IDs
    - Updated to use single name field
    - Added foreign key enforcement
@@ -253,11 +234,17 @@ schema.
 ### Database Management
 
 ```bash
-# Initialize/migrate database
-npm run db:init
-
 # Check migration status
 npm run db:migrate:status
+
+# Run migrations only (schema updates)
+npm run db:migrate
+
+# Initialize database (runs migrations + seeds admin user)
+npm run db:init
+
+# Seed additional sample data (optional, for development)
+npm run db:seed
 
 # Drop old database and reinitialize (DESTRUCTIVE)
 rm -f bookclubber.db bookclubber.db-shm bookclubber.db-wal
@@ -357,17 +344,6 @@ After running `npm run db:init`, a default admin user is created:
 - **Email**: admin@bookclub.com
 - **Password**: admin123
 - **Role**: admin
-
-**⚠️ Important**: Change the default admin password after first login!
-
-## Next Steps
-
-1. Update existing API routes to work with new schema
-2. Create auth service using new sessions table
-3. Implement cycle management endpoints
-4. Build out suggestion/voting workflow
-5. Create reading schedule management
-6. Implement meeting scheduling
 
 ## Notes for Future Development
 

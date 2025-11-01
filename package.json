@@ -10,7 +10,8 @@
     "lint": "next lint",
     "db:migrate": "cross-env DATABASE_PATH=./bookclubber.db numtwo-migrate",
     "db:migrate:status": "cross-env DATABASE_PATH=./bookclubber.db numtwo-migrate status",
-    "db:init": "npm run db:migrate",
+    "db:init": "cross-env DATABASE_PATH=./bookclubber.db tsx lib/db/init.ts",
+    "db:seed": "cross-env DATABASE_PATH=./bookclubber.db tsx lib/db/seed.ts",
     "type-check": "tsc --noEmit"
   },
   "keywords": [],

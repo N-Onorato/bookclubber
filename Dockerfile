@@ -12,7 +12,7 @@ COPY . .
 # Create data directory with proper permissions
 RUN mkdir -p /app/data && chmod 755 /app/data
 
-# Initialize database
+# Initialize database (runs migrations + seeds admin user)
 RUN npm run db:init
 
 # Build Next.js application

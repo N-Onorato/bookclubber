@@ -3,6 +3,7 @@ import fs from "fs";
 import bcrypt from "bcrypt";
 import path from "path";
 import { randomUUID } from "crypto";
+import { execSync } from "child_process";
 
 const dbPath = process.env.DATABASE_PATH || "./data/bookclub.db";
 
@@ -15,76 +16,54 @@ if (!fs.existsSync(dbDir)) {
     console.log("Created data directory:", dbDir);
 }
 
-const db = new Database(dbPath);
-console.log("Database connection established");
-
-// Enable WAL mode for better concurrency
-db.pragma("journal_mode = WAL");
-console.log("WAL mode enabled");
-
-// Enable foreign keys
-db.pragma("foreign_keys = ON");
-console.log("Foreign keys enabled");
-
-// Check if tables already exist
-const existingTables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'").all();
-
-if (existingTables.length === 0) {
-    // Read and execute schema
-    const schemaPath = "./lib/db/schema.sql";
-    console.log("Reading schema from:", schemaPath);
-
-    if (!fs.existsSync(schemaPath)) {
-        console.error("Schema file not found at:", schemaPath);
-        process.exit(1);
-    }
-
-    const schema = fs.readFileSync(schemaPath, "utf8");
-    console.log("Schema read, executing...");
-
-    try {
-        db.exec(schema);
-        console.log("Schema executed successfully");
-    } catch (error) {
-        console.error("Error executing schema:", error);
-        process.exit(1);
-    }
-
-    // Verify tables were created
-    try {
-        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
-        console.log("Tables created:", tables.map((t: any) => t.name));
-    } catch (error) {
-        console.error("Error checking tables:", error);
-    }
-} else {
-    console.log("Tables already exist, skipping schema execution");
-    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
-    console.log("Existing tables:", tables.map((t: any) => t.name));
+// Run migrations first to ensure schema is up to date
+console.log("\n=== Running Database Migrations ===");
+try {
+    execSync("npm run db:migrate", {
+        stdio: "inherit",
+        env: { ...process.env, DATABASE_PATH: dbPath }
+    });
+    console.log("Migrations completed successfully\n");
+} catch (error) {
+    console.error("Error running migrations:", error);
+    process.exit(1);
 }
 
-// Create default admin user if none exists
+// Now seed the database with initial data
+console.log("=== Seeding Database ===");
+
+const db = new Database(dbPath);
+db.pragma("foreign_keys = ON");
+
+// Seed default admin user if none exists
 try {
     const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as {
         count: number;
     };
 
     if (userCount.count === 0) {
+        console.log("No users found, creating default admin...");
+
         const adminId = randomUUID();
         const adminPassword = bcrypt.hashSync("admin123", 10);
+
         db.prepare(`
             INSERT INTO users (id, email, password_hash, name, role)
             VALUES (?, ?, ?, ?, ?)
         `).run(adminId, "admin@bookclub.com", adminPassword, "Admin User", "admin");
 
-        console.log("Created default admin user: admin@bookclub.com / admin123");
-        console.log("User ID:", adminId);
+        console.log("✓ Created default admin user");
+        console.log("  Email: admin@bookclub.com");
+        console.log("  Password: admin123");
+        console.log("  ⚠️  IMPORTANT: Change this password after first login!\n");
     } else {
-        console.log(`Database already has ${userCount.count} users`);
+        console.log(`Database already has ${userCount.count} user(s), skipping seed\n`);
     }
 } catch (error) {
-    console.error("Error creating admin user:", error);
+    console.error("Error seeding admin user:", error);
+    db.close();
+    process.exit(1);
 }
 
 db.close();
-console.log("Database initialization completed");
+console.log("=== Database initialization completed ===");
