@@ -1,0 +1,84 @@
+-- BookClubber Database Schema
+-- Initial schema for book club management
+
+-- Users table
+-- Stores user authentication and profile information
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  salt TEXT NOT NULL,
+  role TEXT NOT NULL CHECK(role IN ('admin', 'member')),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+
+-- Books table
+-- Stores information about books available for voting
+CREATE TABLE IF NOT EXISTS books (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  author TEXT NOT NULL,
+  isbn TEXT,
+  description TEXT,
+  suggested_by TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (suggested_by) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_books_title ON books(title);
+CREATE INDEX IF NOT EXISTS idx_books_author ON books(author);
+CREATE INDEX IF NOT EXISTS idx_books_suggested_by ON books(suggested_by);
+
+-- Themes table
+-- Stores reading themes/topics for book selection
+CREATE TABLE IF NOT EXISTS themes (
+  id TEXT PRIMARY KEY,
+  name TEXT UNIQUE NOT NULL,
+  description TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_themes_name ON themes(name);
+
+-- Book Sessions table
+-- Represents book club reading sessions/meetings
+CREATE TABLE IF NOT EXISTS book_sessions (
+  id TEXT PRIMARY KEY,
+  book_id TEXT NOT NULL,
+  theme_id TEXT,
+  session_date TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('upcoming', 'active', 'completed')),
+  notes TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (book_id) REFERENCES books(id),
+  FOREIGN KEY (theme_id) REFERENCES themes(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_book_sessions_book_id ON book_sessions(book_id);
+CREATE INDEX IF NOT EXISTS idx_book_sessions_theme_id ON book_sessions(theme_id);
+CREATE INDEX IF NOT EXISTS idx_book_sessions_session_date ON book_sessions(session_date);
+CREATE INDEX IF NOT EXISTS idx_book_sessions_status ON book_sessions(status);
+
+-- Votes table
+-- Stores user votes for book selections
+CREATE TABLE IF NOT EXISTS votes (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  book_id TEXT NOT NULL,
+  session_id TEXT,
+  vote_value INTEGER NOT NULL CHECK(vote_value BETWEEN 1 AND 5),
+  voted_at TEXT NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (book_id) REFERENCES books(id),
+  FOREIGN KEY (session_id) REFERENCES book_sessions(id),
+  UNIQUE(user_id, book_id, session_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_votes_user_id ON votes(user_id);
+CREATE INDEX IF NOT EXISTS idx_votes_book_id ON votes(book_id);
+CREATE INDEX IF NOT EXISTS idx_votes_session_id ON votes(session_id);
