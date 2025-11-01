@@ -100,13 +100,18 @@ export class SuggestionService {
     /**
      * Delete a suggestion
      */
-    static async deleteSuggestion(suggestionId: string, userId: string): Promise<boolean> {
+    static async deleteSuggestion(suggestionId: string, userId: string, isAdmin: boolean = false): Promise<boolean> {
         try {
             const db = getDatabase();
 
-            // Verify the suggestion belongs to the user
+            // Verify the suggestion belongs to the user or user is admin
             const suggestion = await this.getSuggestionById(suggestionId);
-            if (!suggestion || suggestion.user_id !== userId) {
+            if (!suggestion) {
+                return false;
+            }
+
+            // Only allow deletion if user owns the suggestion or is an admin
+            if (suggestion.user_id !== userId && !isAdmin) {
                 return false;
             }
 

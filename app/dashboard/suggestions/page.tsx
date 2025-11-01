@@ -177,6 +177,34 @@ export default function SuggestionsPage() {
         return activeCycle.type === 'suggestion' && phase === 'suggestion';
     };
 
+    const canDelete = (suggestion: Suggestion) => {
+        if (!currentUser) return false;
+        // User can delete their own suggestions, or admins can delete any
+        return suggestion.user_id === currentUser.id || currentUser.role === 'admin';
+    };
+
+    const handleDeleteSuggestion = async (suggestionId: string) => {
+        if (!confirm('Are you sure you want to delete this suggestion?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/suggestions/${suggestionId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                loadSuggestions();
+            } else {
+                const data = await response.json();
+                alert(`Error: ${data.error}`);
+            }
+        } catch (error) {
+            console.error('Error deleting suggestion:', error);
+            alert('Failed to delete suggestion');
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -240,37 +268,62 @@ export default function SuggestionsPage() {
                         <p className="text-foreground/60">No books suggested yet. Be the first!</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="space-y-6">
                         {suggestions.map((suggestion) => (
                             <div
                                 key={suggestion.id}
                                 className="p-6 bg-[#18181B]/60 backdrop-blur-lg rounded-2xl border border-[#27272A] hover:border-accent transition-all"
                             >
-                                {suggestion.cover_image_url && (
-                                    <img
-                                        src={suggestion.cover_image_url}
-                                        alt={suggestion.title}
-                                        className="w-full h-48 object-cover rounded-lg mb-4"
-                                    />
-                                )}
-                                <h3 className="text-xl font-serif font-semibold text-foreground mb-1">
-                                    {suggestion.title}
-                                </h3>
-                                <p className="text-foreground/70 text-sm mb-3">by {suggestion.author}</p>
-                                {suggestion.description && (
-                                    <p className="text-foreground/60 text-sm mb-3 line-clamp-3">
-                                        {suggestion.description}
-                                    </p>
-                                )}
-                                {suggestion.reason && (
-                                    <div className="mt-3 pt-3 border-t border-[#27272A]">
-                                        <p className="text-foreground/50 text-xs mb-1">Why this book?</p>
-                                        <p className="text-foreground/70 text-sm italic">"{suggestion.reason}"</p>
+                                <div className="flex gap-6">
+                                    {/* Book Cover - Left Side */}
+                                    {suggestion.cover_image_url && (
+                                        <div className="flex-shrink-0">
+                                            <img
+                                                src={suggestion.cover_image_url}
+                                                alt={suggestion.title}
+                                                className="w-48 h-auto object-cover rounded-lg shadow-lg"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Book Details - Right Side */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="flex-1">
+                                                <h3 className="text-2xl font-serif font-semibold text-foreground mb-2">
+                                                    {suggestion.title}
+                                                </h3>
+                                                <p className="text-foreground/70 text-lg mb-3">by {suggestion.author}</p>
+                                            </div>
+                                            {canDelete(suggestion) && (
+                                                <button
+                                                    onClick={() => handleDeleteSuggestion(suggestion.id)}
+                                                    className="ml-4 px-3 py-1 text-sm bg-red-500/10 border border-red-500/30 rounded-full text-red-400 hover:bg-red-500/20 transition-colors"
+                                                    title="Delete suggestion"
+                                                >
+                                                    Delete
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {suggestion.description && (
+                                            <p className="text-foreground/60 text-sm mb-4 leading-relaxed">
+                                                {suggestion.description}
+                                            </p>
+                                        )}
+
+                                        {suggestion.reason && (
+                                            <div className="mt-4 p-4 bg-[#18181B]/40 border border-[#27272A] rounded-lg">
+                                                <p className="text-foreground/50 text-xs mb-2 uppercase tracking-wider">Why this book?</p>
+                                                <p className="text-foreground/70 text-sm italic">"{suggestion.reason}"</p>
+                                            </div>
+                                        )}
+
+                                        <p className="text-foreground/40 text-xs mt-4">
+                                            Suggested by {suggestion.suggested_by}
+                                        </p>
                                     </div>
-                                )}
-                                <p className="text-foreground/40 text-xs mt-3">
-                                    Suggested by {suggestion.suggested_by}
-                                </p>
+                                </div>
                             </div>
                         ))}
                     </div>

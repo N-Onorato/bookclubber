@@ -85,7 +85,7 @@ export async function DELETE(
             );
         }
 
-        const success = await SuggestionService.deleteSuggestion(params.id, user.id);
+        const success = await SuggestionService.deleteSuggestion(params.id, user.id, user.role === 'admin');
 
         if (!success) {
             return NextResponse.json(
