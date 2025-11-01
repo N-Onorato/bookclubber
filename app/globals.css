@@ -1,24 +1,45 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-  }
+@theme {
+  /* Color palette */
+  --color-background: oklch(100% 0 0);
+  --color-foreground: oklch(9.8% 0.024 285.885);
+  --color-border: oklch(91.4% 0.009 264.542);
+  --color-input: oklch(91.4% 0.009 264.542);
+  --color-ring: oklch(65.531% 0.241 293.723);
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-  }
+  --color-primary: oklch(65.531% 0.241 293.723);
+  --color-primary-foreground: oklch(98% 0.006 264.542);
+
+  --color-secondary: oklch(95.9% 0.004 285.885);
+  --color-secondary-foreground: oklch(24.491% 0.033 285.885);
+
+  --color-muted: oklch(95.9% 0.004 285.885);
+  --color-muted-foreground: oklch(60.5% 0.014 285.885);
+
+  --color-accent: oklch(95.9% 0.004 285.885);
+  --color-accent-foreground: oklch(24.491% 0.033 285.885);
+
+  --color-destructive: oklch(62.8% 0.258 27.325);
+  --color-destructive-foreground: oklch(98% 0.006 264.542);
+
+  --color-card: oklch(100% 0 0);
+  --color-card-foreground: oklch(9.8% 0.024 285.885);
+
+  --color-popover: oklch(100% 0 0);
+  --color-popover-foreground: oklch(9.8% 0.024 285.885);
+
+  /* Border radius */
+  --radius-lg: 0.5rem;
+  --radius-md: calc(0.5rem - 2px);
+  --radius-sm: calc(0.5rem - 4px);
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+* {
+  border-color: var(--color-border);
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
 }
