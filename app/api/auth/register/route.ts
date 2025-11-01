@@ -3,9 +3,10 @@ import { AuthService } from '@/lib/services/authService';
 
 export async function POST(request: NextRequest) {
     try {
-        const { firstName, lastName, email, password } = await request.json();
+        const { name, email, password } = await request.json();
 
-        if (!firstName || !lastName || !email || !password) {
+        // Validation
+        if (!name || !email || !password) {
             return NextResponse.json(
                 { error: 'All fields are required' },
                 { status: 400 }
@@ -19,28 +20,33 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const user = await AuthService.createUser(
-            email,
-            password,
-            firstName,
-            lastName
-        );
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return NextResponse.json(
+                { error: 'Invalid email address' },
+                { status: 400 }
+            );
+        }
+
+        // Create user
+        const user = await AuthService.createUser(email, password, name);
 
         if (!user) {
             return NextResponse.json(
-                { error: 'User already exists or registration failed' },
+                { error: 'User already exists with this email' },
                 { status: 409 }
             );
         }
 
+        // Return success (no password hash in response)
         return NextResponse.json({
             success: true,
             message: 'User created successfully',
             user: {
                 id: user.id,
                 email: user.email,
-                first_name: user.first_name,
-                last_name: user.last_name,
+                name: user.name,
                 role: user.role
             }
         }, { status: 201 });

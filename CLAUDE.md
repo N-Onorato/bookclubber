@@ -1,16 +1,184 @@
 # Book Club Platform - Development Documentation
 
-This file tracks important implementation details, commands, and file locations for development with Claude.
+This file tracks important implementation details, commands, and file locations
+for development with Claude.
+
+# Auto-Documentation Note
+
+**For Claude:** When making significant architectural changes or discovering
+important patterns/gotchas, automatically update this CLAUDE.md file with:
+
+1. Relevant implementation notes
+2. Key files and their purposes
+3. Important patterns or conventions discovered
+4. Common mistakes to avoid (like the getInstance() issue)
+5. Update the "Recent Updates" section with dated entries
+6. **Important**: This file takes up context space. Limit it to ~350 lines and
+   refactor as needed.
+
+## Recent Updates (2025-11-01)
+
+### Schema Alignment and Migration Fixes
+
+Fixed multiple schema mismatch issues and established systematic approach to
+prevent future issues.
+
+#### Issues Identified and Fixed:
+
+1. **Database path mismatch** - Migrations were applied to `bookclubber.db` but
+   app was using `data/bookclub.db`
+   - **Fix**: Created `.env.local` with `DATABASE_PATH=./bookclubber.db`
+
+2. **Missing columns in suggestions table**
+   - **Migration v3**: Added `reason` column for suggestion explanations
+   - **Migration v4**: Added `updated_at` column with auto-update trigger
+
+3. **Missing columns in books table**
+   - **Migration v2**: Added generic `source` and `source_id` columns for
+     external book tracking
+
+#### New Documentation:
+
+Created [SCHEMA_ALIGNMENT.md](SCHEMA_ALIGNMENT.md) with:
+
+- Root cause analysis of schema mismatches
+- Comprehensive checklist for creating migrations
+- Guidelines for writing service layer code
+- Database configuration best practices
+- Quick reference commands
+- Prevention strategies
+
+#### Current Migration Status:
+
+- ✅ v1: Initial schema (all tables)
+- ✅ v2: Generic book source tracking
+- ✅ v3: Suggestion reasons
+- ✅ v4: Suggestion updated_at timestamp
+
+**Important**: Always restart dev server after applying migrations!
+
+### Book Suggestion System Implementation
+
+Implemented complete book suggestion workflow with Open Library integration.
+
+#### Key Components:
+
+1. **Services**
+   - **CycleService**
+     ([lib/services/cycleService.ts](lib/services/cycleService.ts))
+     - Create and manage suggestion/voting cycles
+     - Track cycle phases (pending, suggestion, voting, completed)
+     - Validate user suggestion eligibility
+     - Update cycle status and set winning books
+
+   - **SuggestionService**
+     ([lib/services/suggestionService.ts](lib/services/suggestionService.ts))
+     - Create, update, and delete book suggestions
+     - Get suggestions by cycle or user
+     - Check for duplicate suggestions
+     - Fetch suggestions with book and user details
+
+   - **BookService**
+     ([lib/services/bookService.ts](lib/services/bookService.ts))
+     - Search books via Open Library API
+     - Fetch detailed book information
+     - Create/update books in local database
+     - Proper User-Agent header:
+       `dataDumperBookClub/1.0 (n_onorato@outlook.com)`
+
+2. **API Routes**
+   - **Cycles**
+     - `GET /api/cycles` - Get all cycles
+     - `POST /api/cycles` - Create new cycle (admin only)
+     - `GET /api/cycles/active` - Get currently active cycle
+     - `GET /api/cycles/[id]` - Get specific cycle
+     - `PATCH /api/cycles/[id]` - Update cycle status (admin only)
+
+   - **Suggestions**
+     - `POST /api/suggestions` - Create suggestion
+     - `GET /api/suggestions?cycleId=xxx` - Get cycle suggestions
+     - `PATCH /api/suggestions/[id]` - Update suggestion reason
+     - `DELETE /api/suggestions/[id]` - Delete suggestion
+
+   - **Books**
+     - `GET /api/books/search?q=query` - Search Open Library
+     - `POST /api/books` - Create book from Open Library data
+     - `GET /api/books` - Get all books
+
+3. **UI Pages**
+   - **Dashboard** ([app/dashboard/page.tsx](app/dashboard/page.tsx))
+     - Main hub with navigation to all features
+     - Shows user role (admin/member)
+     - Whimsical bookish design
+
+   - **Admin Panel**
+     ([app/dashboard/admin/page.tsx](app/dashboard/admin/page.tsx))
+     - Create and manage cycles
+     - Set cycle dates and max suggestions per user
+     - Activate/complete cycles
+     - View all cycles with status
+
+   - **Suggestions Page**
+     ([app/dashboard/suggestions/page.tsx](app/dashboard/suggestions/page.tsx))
+     - View all suggestions for active cycle
+     - Search and suggest books via Open Library
+     - Add optional reasoning for suggestions
+     - Track user's suggestion count vs limit
+     - Beautiful book card grid layout
+
+4. **Workflow**
+   - Admin creates a cycle with suggestion and voting dates
+   - Admin activates the cycle
+   - Users search for books via Open Library integration
+   - Users submit up to max suggestions per cycle
+   - Books are automatically added to local database
+   - All suggestions visible to all members
+   - Phase automatically determined by current date vs cycle dates
+
+### Authentication System Implementation
+
+Implemented full authentication system with session-based auth using HTTP-only
+cookies.
+
+#### Key Changes Made:
+
+1. **Authentication Service**
+   ([lib/services/authService.ts](lib/services/authService.ts))
+   - Uses `getDatabase()` from `lib/db/connection.ts` (NOT
+     `DatabaseService.getInstance()`)
+   - Implements bcrypt password hashing (10 rounds)
+   - UUID-based session tokens with 30-day expiration
+   - Session validation and cleanup methods
+
+2. **API Routes**
+   - `POST /api/auth/register` - User registration with validation
+   - `POST /api/auth/login` - Authentication with session creation
+   - `POST /api/auth/logout` - Session deletion and cleanup
+   - `GET /api/auth/me` - Get current authenticated user
+
+3. **Auth Helpers** ([lib/auth.ts](lib/auth.ts))
+   - `getCurrentUser()` - Retrieve user from session cookie
+   - `isAuthenticated()` - Check auth status
+   - `requireAuth()` - Enforce authentication
+   - `requireAdmin()` - Enforce admin role
+
+4. **UI Implementation**
+   - Whimsical bookish design theme applied to all auth pages
+   - Dark candlelight aesthetic with Lora serif and Inter sans-serif fonts
+   - Semi-transparent cards with backdrop blur effects
+   - Literary quotes and decorative elements
 
 ## Recent Updates (2025-10-31)
 
 ### Database Schema Migration
 
-Successfully migrated from initial MVP schema to comprehensive spec-compliant schema.
+Successfully migrated from initial MVP schema to comprehensive spec-compliant
+schema.
 
 #### Key Changes Made:
 
-1. **Updated Technical Specification** ([book-club-technical-spec.md](book-club-technical-spec.md))
+1. **Updated Technical Specification**
+   ([book-club-technical-spec.md](book-club-technical-spec.md))
    - Changed from Prisma/Drizzle ORM to raw SQLite with custom service layer
    - Updated authentication from NextAuth.js/Clerk to custom session-based auth
    - Confirmed Tailwind CSS as styling solution
@@ -42,7 +210,8 @@ Successfully migrated from initial MVP schema to comprehensive spec-compliant sc
 4. **Type Definitions** ([lib/types.ts](lib/types.ts))
    - Updated all interfaces to match new schema
    - Changed IDs from number to string (UUIDs)
-   - Added new types for Cycle, ReadingChunk, Meeting, BlockedAuthor, Theme, etc.
+   - Added new types for Cycle, ReadingChunk, Meeting, BlockedAuthor, Theme,
+     etc.
    - Added extended types with relations
    - Added request/response types for API endpoints
 
@@ -59,6 +228,7 @@ Successfully migrated from initial MVP schema to comprehensive spec-compliant sc
 ## Important Files
 
 ### Configuration
+
 - `package.json` - npm scripts and dependencies
 - `migrations.yaml` - Database migration definitions
 - `tailwind.config.js` - Tailwind CSS configuration
@@ -66,12 +236,14 @@ Successfully migrated from initial MVP schema to comprehensive spec-compliant sc
 - `tsconfig.json` - TypeScript configuration
 
 ### Database
+
 - `lib/db/schema.sql` - Complete database schema (reference)
 - `lib/db/connection.ts` - Database connection and service layer
 - `lib/db/init.ts` - Database initialization script
 - `lib/types.ts` - TypeScript type definitions
 
 ### Documentation
+
 - `book-club-technical-spec.md` - Complete technical specification
 - `book-club-product-spec.md` - Product requirements
 - `README.md` - Setup and deployment instructions
@@ -133,6 +305,7 @@ docker-compose down
 ## Database Schema Overview
 
 ### Core Tables
+
 - `users` - User accounts with UUID primary keys
 - `sessions` - User authentication sessions
 - `books` - Book metadata with series tracking and status
@@ -143,13 +316,16 @@ docker-compose down
 - `meetings` - Meeting scheduling
 
 ### Feature Tables
+
 - `blocked_authors` - Author blocklist
 - `themes` - Theme wheel options
 
 ### Phase 2 Tables
+
 - `rankings` - Tier list rankings (S/A/B/C/D/F)
 
 ### System Tables
+
 - `audit_log` - Audit trail for all actions
 - `events` - Event queue for notifications
 
@@ -177,6 +353,7 @@ NODE_ENV="development"
 ## Default Admin User
 
 After running `npm run db:init`, a default admin user is created:
+
 - **Email**: admin@bookclub.com
 - **Password**: admin123
 - **Role**: admin
@@ -202,3 +379,20 @@ After running `npm run db:init`, a default admin user is created:
 - Using migrations for schema versioning - never modify existing migrations
 - Cache invalidation available via `DatabaseService.clearCache()`
 - Transaction support via `DatabaseService.transaction()`
+
+### Important: Database Connection Pattern
+
+**CRITICAL:** When accessing the database in services, use `getDatabase()` from
+`lib/db/connection.ts`:
+
+```typescript
+import { getDatabase } from "../db/connection";
+
+// Correct usage:
+const db = getDatabase();
+const user = db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
+```
+
+**DO NOT** use `DatabaseService.getInstance()` - this method does not exist. The
+`DatabaseService` class only provides static helper methods (`get()`, `all()`,
+`run()`, etc.).

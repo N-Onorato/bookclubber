@@ -26,32 +26,41 @@ console.log("WAL mode enabled");
 db.pragma("foreign_keys = ON");
 console.log("Foreign keys enabled");
 
-// Read and execute schema
-const schemaPath = "./lib/db/schema.sql";
-console.log("Reading schema from:", schemaPath);
+// Check if tables already exist
+const existingTables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'").all();
 
-if (!fs.existsSync(schemaPath)) {
-    console.error("Schema file not found at:", schemaPath);
-    process.exit(1);
-}
+if (existingTables.length === 0) {
+    // Read and execute schema
+    const schemaPath = "./lib/db/schema.sql";
+    console.log("Reading schema from:", schemaPath);
 
-const schema = fs.readFileSync(schemaPath, "utf8");
-console.log("Schema read, executing...");
+    if (!fs.existsSync(schemaPath)) {
+        console.error("Schema file not found at:", schemaPath);
+        process.exit(1);
+    }
 
-try {
-    db.exec(schema);
-    console.log("Schema executed successfully");
-} catch (error) {
-    console.error("Error executing schema:", error);
-    process.exit(1);
-}
+    const schema = fs.readFileSync(schemaPath, "utf8");
+    console.log("Schema read, executing...");
 
-// Verify tables were created
-try {
+    try {
+        db.exec(schema);
+        console.log("Schema executed successfully");
+    } catch (error) {
+        console.error("Error executing schema:", error);
+        process.exit(1);
+    }
+
+    // Verify tables were created
+    try {
+        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+        console.log("Tables created:", tables.map((t: any) => t.name));
+    } catch (error) {
+        console.error("Error checking tables:", error);
+    }
+} else {
+    console.log("Tables already exist, skipping schema execution");
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
-    console.log("Tables created:", tables.map((t: any) => t.name));
-} catch (error) {
-    console.error("Error checking tables:", error);
+    console.log("Existing tables:", tables.map((t: any) => t.name));
 }
 
 // Create default admin user if none exists

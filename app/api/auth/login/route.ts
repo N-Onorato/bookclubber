@@ -6,6 +6,7 @@ export async function POST(request: NextRequest) {
     try {
         const { email, password } = await request.json();
 
+        // Validation
         if (!email || !password) {
             return NextResponse.json(
                 { error: 'Email and password are required' },
@@ -13,36 +14,35 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const user = await AuthService.authenticateUser(email, password);
+        // Authenticate and create session
+        const result = await AuthService.login(email, password);
 
-        if (!user) {
+        if (!result) {
             return NextResponse.json(
                 { error: 'Invalid email or password' },
                 { status: 401 }
             );
         }
 
-        // Create a simple session cookie
-        // Note: In production, you'd want to use a proper session management library
-        const cookieStore = cookies();
-        cookieStore.set('user-session', JSON.stringify({
-            id: user.id,
-            email: user.email,
-            role: user.role
-        }), {
+        const { user, session } = result;
+
+        // Set HTTP-only session cookie
+        const cookieStore = await cookies();
+        cookieStore.set('session_id', session.id, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 60 * 60 * 24 * 7 // 7 days
+            maxAge: 60 * 60 * 24 * 30, // 30 days
+            path: '/'
         });
 
+        // Return success (no password hash in response)
         return NextResponse.json({
             success: true,
             user: {
                 id: user.id,
                 email: user.email,
-                first_name: user.first_name,
-                last_name: user.last_name,
+                name: user.name,
                 role: user.role
             }
         });
