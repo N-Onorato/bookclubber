@@ -1,90 +1,107 @@
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
-      <div className="max-w-4xl mx-auto px-4 py-16">
-        <div className="text-center">
-          {/* Logo/Icon placeholder */}
+    <main className="min-h-screen flex items-center justify-center py-16 px-4">
+      <div className="max-w-5xl mx-auto w-full">
+        <div className="text-center mb-16">
+          {/* Logo/Icon */}
           <div className="mb-8 flex justify-center">
-            <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+            <div className="w-24 h-24 rounded-full flex items-center justify-center" style={{
+              background: 'radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, rgba(79, 70, 229, 0.1) 100%)',
+              boxShadow: '0 0 60px rgba(212, 175, 55, 0.2)'
+            }}>
               <svg
-                className="w-12 h-12 text-white"
+                className="w-14 h-14 text-[#D4AF37]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                strokeWidth={1.5}
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={2}
                   d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                 />
               </svg>
             </div>
           </div>
 
-          <h1 className="text-6xl font-extrabold text-gray-900 mb-4 tracking-tight">
-            Book Club Platform
+          <h1 className="text-6xl md:text-7xl font-bold text-[#E4E4E7] mb-6 tracking-wide">
+            The Book Circle
           </h1>
 
-          <p className="text-xl text-gray-600 mb-12 max-w-2xl mx-auto leading-relaxed">
-            Organize your book club with ease. Suggest books, vote on selections,
-            schedule reading sessions, and track your literary journey together.
+          <p className="text-lg md:text-xl text-[#A1A1AA] mb-4 max-w-2xl mx-auto font-light italic">
+            Where stories come alive through shared discovery
+          </p>
+
+          <p className="text-base text-[#71717A] max-w-3xl mx-auto leading-relaxed">
+            Suggest books, cast your vote, track reading progress, and gather for thoughtful discussions.
+            Your literary journey begins here.
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 mt-12">
             <a
               href="/auth/register"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
+              className="bg-[#4F46E5] hover:bg-[#4338CA] text-white font-semibold py-3 px-10 rounded-full shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
+              style={{
+                boxShadow: '0 0 20px rgba(79, 70, 229, 0.3)'
+              }}
             >
-              Get Started
+              Begin Your Journey
             </a>
             <a
               href="/auth/login"
-              className="bg-white hover:bg-gray-50 text-indigo-600 font-semibold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 border-2 border-indigo-600"
+              className="bg-[#27272A] hover:bg-[#3F3F46] text-[#E4E4E7] font-semibold py-3 px-10 rounded-full border border-[#3F3F46] shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:border-[#A78BFA]"
             >
-              Sign In
+              Return to Library
             </a>
           </div>
+        </div>
 
-          {/* Feature highlights */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 text-left">
-            <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Suggest & Vote</h3>
-              <p className="text-gray-600 text-sm">
-                Members suggest books each cycle and vote democratically on the next read.
-              </p>
+        {/* Feature highlights */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-20">
+          <div className="bg-[#18181B]/60 backdrop-blur-lg p-8 rounded-3xl border border-[#3F3F46] hover:border-[#A78BFA]/50 transition-all duration-300 group">
+            <div className="w-14 h-14 bg-[#4F46E5]/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-[#4F46E5]/20 transition-colors">
+              <svg className="w-7 h-7 text-[#4F46E5]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+              </svg>
             </div>
-
-            <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Schedule Meetings</h3>
-              <p className="text-gray-600 text-sm">
-                Plan discussion meetings with integrated scheduling and reminders.
-              </p>
-            </div>
-
-            <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Track Progress</h3>
-              <p className="text-gray-600 text-sm">
-                Break books into chunks and track your group's reading progress.
-              </p>
-            </div>
+            <h3 className="text-xl font-semibold text-[#E4E4E7] mb-3">Suggest & Vote</h3>
+            <p className="text-[#A1A1AA] text-sm leading-relaxed">
+              Each cycle, members propose their favorite reads. The circle votes, and the story begins.
+            </p>
           </div>
+
+          <div className="bg-[#18181B]/60 backdrop-blur-lg p-8 rounded-3xl border border-[#3F3F46] hover:border-[#A78BFA]/50 transition-all duration-300 group">
+            <div className="w-14 h-14 bg-[#A78BFA]/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-[#A78BFA]/20 transition-colors">
+              <svg className="w-7 h-7 text-[#A78BFA]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-[#E4E4E7] mb-3">Gather & Discuss</h3>
+            <p className="text-[#A1A1AA] text-sm leading-relaxed">
+              Schedule meetings, share insights, and explore the depths of each narrative together.
+            </p>
+          </div>
+
+          <div className="bg-[#18181B]/60 backdrop-blur-lg p-8 rounded-3xl border border-[#3F3F46] hover:border-[#A78BFA]/50 transition-all duration-300 group">
+            <div className="w-14 h-14 bg-[#D4AF37]/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-[#D4AF37]/20 transition-colors">
+              <svg className="w-7 h-7 text-[#D4AF37]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-[#E4E4E7] mb-3">Track Progress</h3>
+            <p className="text-[#A1A1AA] text-sm leading-relaxed">
+              Break books into chapters, monitor your pace, and celebrate milestones as one.
+            </p>
+          </div>
+        </div>
+
+        {/* Literary quote */}
+        <div className="mt-20 text-center">
+          <p className="text-sm text-[#71717A] italic font-serif max-w-2xl mx-auto leading-relaxed">
+            "Books are a uniquely portable magic. In them, we find mirrors of ourselves and windows into worlds unknown."
+          </p>
         </div>
       </div>
     </main>

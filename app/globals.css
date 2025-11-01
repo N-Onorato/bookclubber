@@ -1,38 +1,51 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @theme {
-  /* Color palette */
-  --color-background: oklch(100% 0 0);
-  --color-foreground: oklch(9.8% 0.024 285.885);
-  --color-border: oklch(91.4% 0.009 264.542);
-  --color-input: oklch(91.4% 0.009 264.542);
-  --color-ring: oklch(65.531% 0.241 293.723);
+  /* Brand Colors - Whimsical Bookish Theme */
+  --color-background: #0F0F10;
+  --color-foreground: #E4E4E7;
 
-  --color-primary: oklch(65.531% 0.241 293.723);
-  --color-primary-foreground: oklch(98% 0.006 264.542);
+  /* Primary - Indigo for creativity and focus */
+  --color-primary: #4F46E5;
+  --color-primary-foreground: #FFFFFF;
 
-  --color-secondary: oklch(95.9% 0.004 285.885);
-  --color-secondary-foreground: oklch(24.491% 0.033 285.885);
+  /* Secondary - Zinc grays for depth */
+  --color-secondary: #27272A;
+  --color-secondary-foreground: #E4E4E7;
 
-  --color-muted: oklch(95.9% 0.004 285.885);
-  --color-muted-foreground: oklch(60.5% 0.014 285.885);
+  /* Accent - Lavender for interactions */
+  --color-accent: #A78BFA;
+  --color-accent-foreground: #18181B;
 
-  --color-accent: oklch(95.9% 0.004 285.885);
-  --color-accent-foreground: oklch(24.491% 0.033 285.885);
+  /* Muted - Soft cream/parchment */
+  --color-muted: #3F3F46;
+  --color-muted-foreground: #A1A1AA;
 
-  --color-destructive: oklch(62.8% 0.258 27.325);
-  --color-destructive-foreground: oklch(98% 0.006 264.542);
+  /* Candlelight glow - Muted gold/amber */
+  --color-candlelight: #D4AF37;
 
-  --color-card: oklch(100% 0 0);
-  --color-card-foreground: oklch(9.8% 0.024 285.885);
+  /* Input and borders */
+  --color-input: #27272A;
+  --color-border: #3F3F46;
+  --color-ring: #A78BFA;
 
-  --color-popover: oklch(100% 0 0);
-  --color-popover-foreground: oklch(9.8% 0.024 285.885);
+  /* Destructive */
+  --color-destructive: #EF4444;
+  --color-destructive-foreground: #FFFFFF;
 
-  /* Border radius */
-  --radius-lg: 0.5rem;
-  --radius-md: calc(0.5rem - 2px);
-  --radius-sm: calc(0.5rem - 4px);
+  /* Card with semi-transparent overlay */
+  --color-card: rgba(24, 24, 27, 0.6);
+  --color-card-foreground: #E4E4E7;
+
+  /* Border radius - soft rounded */
+  --radius-lg: 1.5rem;
+  --radius-md: 1rem;
+  --radius-sm: 0.5rem;
+
+  /* Font families */
+  --font-serif: 'Lora', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
 }
 
 * {
@@ -42,4 +55,16 @@
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);
+  font-family: var(--font-sans);
+}
+
+/* Serif for titles and headers */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  letter-spacing: 0.025em;
+}
+
+/* Comfortable reading line height */
+p {
+  line-height: 1.7;
 }

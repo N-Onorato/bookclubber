@@ -38,78 +38,104 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-            <div className="sm:mx-auto sm:w-full sm:max-w-md">
-                <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                    Sign in to your account
-                </h2>
+        <div className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
+            {/* Decorative book icon */}
+            <div className="absolute top-8 left-1/2 -translate-x-1/2 opacity-20">
+                <svg className="w-16 h-16 text-[#D4AF37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
             </div>
 
-            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+                <h2 className="text-center text-4xl font-bold text-[#E4E4E7] mb-3 tracking-wide">
+                    Enter the Library
+                </h2>
+                <p className="text-center text-sm text-[#A1A1AA] font-light italic">
+                    Welcome back, reader.
+                </p>
+            </div>
+
+            <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+                <div
+                    className="bg-[#18181B]/60 backdrop-blur-lg py-10 px-6 shadow-2xl rounded-3xl border border-[#3F3F46]"
+                    style={{
+                        boxShadow: '0 0 40px rgba(212, 175, 55, 0.1), 0 20px 25px -5px rgba(0, 0, 0, 0.5)'
+                    }}
+                >
                     <form className="space-y-6" onSubmit={handleSubmit}>
                         <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                                Email address
+                            <label htmlFor="email" className="block text-sm font-medium text-[#E4E4E7] mb-2">
+                                Email
                             </label>
-                            <div className="mt-1">
-                                <input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    autoComplete="email"
-                                    required
-                                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                />
-                            </div>
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                autoComplete="email"
+                                required
+                                placeholder="your@email.com"
+                                className="appearance-none block w-full px-4 py-3 bg-[#27272A] border border-[#3F3F46] rounded-xl text-[#E4E4E7] placeholder-[#71717A] focus:outline-none focus:ring-2 focus:ring-[#A78BFA] focus:border-transparent transition-all duration-200 shadow-inner"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                            />
                         </div>
 
                         <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                            <label htmlFor="password" className="block text-sm font-medium text-[#E4E4E7] mb-2">
                                 Password
                             </label>
-                            <div className="mt-1">
-                                <input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    autoComplete="current-password"
-                                    required
-                                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                />
-                            </div>
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                autoComplete="current-password"
+                                required
+                                placeholder="••••••••"
+                                className="appearance-none block w-full px-4 py-3 bg-[#27272A] border border-[#3F3F46] rounded-xl text-[#E4E4E7] placeholder-[#71717A] focus:outline-none focus:ring-2 focus:ring-[#A78BFA] focus:border-transparent transition-all duration-200 shadow-inner"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                            />
                         </div>
 
                         {error && (
-                            <div className="text-red-600 text-sm">
+                            <div className="bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444] px-4 py-3 rounded-lg text-sm">
                                 {error}
                             </div>
                         )}
 
-                        <div>
+                        <div className="pt-2">
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                                className="w-full flex justify-center py-3 px-6 border border-transparent rounded-full shadow-lg text-base font-semibold text-white bg-[#4F46E5] hover:bg-[#4338CA] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#A78BFA] focus:ring-offset-[#0F0F10] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
+                                style={{
+                                    boxShadow: loading ? 'none' : '0 0 20px rgba(79, 70, 229, 0.3)'
+                                }}
                             >
-                                {loading ? 'Signing in...' : 'Sign in'}
+                                {loading ? 'Opening the door...' : 'Enter'}
                             </button>
                         </div>
 
-                        <div className="text-center">
-                            <a
-                                href="/auth/register"
-                                className="text-indigo-600 hover:text-indigo-500"
-                            >
-                                Don't have an account? Register
-                            </a>
+                        <div className="text-center pt-4 border-t border-[#3F3F46]/50">
+                            <p className="text-sm text-[#A1A1AA]">
+                                New to our circle?{' '}
+                                <a
+                                    href="/auth/register"
+                                    className="text-[#A78BFA] hover:text-[#C4B5FD] font-medium transition-colors duration-200"
+                                >
+                                    Join the club
+                                </a>
+                            </p>
                         </div>
                     </form>
                 </div>
+            </div>
+
+            {/* Decorative quote */}
+            <div className="mt-12 text-center relative z-10">
+                <p className="text-xs text-[#71717A] italic font-serif max-w-md mx-auto">
+                    "A reader lives a thousand lives before he dies... The man who never reads lives only one."
+                </p>
             </div>
         </div>
     );
