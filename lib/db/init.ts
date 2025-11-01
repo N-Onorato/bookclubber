@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import fs from "fs";
 import bcrypt from "bcrypt";
 import path from "path";
+import { randomUUID } from "crypto";
 
 const dbPath = process.env.DATABASE_PATH || "./data/bookclub.db";
 
@@ -20,6 +21,10 @@ console.log("Database connection established");
 // Enable WAL mode for better concurrency
 db.pragma("journal_mode = WAL");
 console.log("WAL mode enabled");
+
+// Enable foreign keys
+db.pragma("foreign_keys = ON");
+console.log("Foreign keys enabled");
 
 // Read and execute schema
 const schemaPath = "./lib/db/schema.sql";
@@ -54,15 +59,17 @@ try {
     const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as {
         count: number;
     };
-    
+
     if (userCount.count === 0) {
+        const adminId = randomUUID();
         const adminPassword = bcrypt.hashSync("admin123", 10);
         db.prepare(`
-            INSERT INTO users (email, password_hash, first_name, last_name, role) 
+            INSERT INTO users (id, email, password_hash, name, role)
             VALUES (?, ?, ?, ?, ?)
-        `).run("admin@bookclub.com", adminPassword, "Admin", "User", "admin");
+        `).run(adminId, "admin@bookclub.com", adminPassword, "Admin User", "admin");
 
         console.log("Created default admin user: admin@bookclub.com / admin123");
+        console.log("User ID:", adminId);
     } else {
         console.log(`Database already has ${userCount.count} users`);
     }

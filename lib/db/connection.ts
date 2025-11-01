@@ -9,6 +9,7 @@ export function getDatabase(): Database.Database {
         const dbPath = process.env.DATABASE_PATH || "./data/bookclub.db";
         db = new Database(dbPath);
         db.pragma("journal_mode = WAL");
+        db.pragma("foreign_keys = ON");
     }
     return db;
 }
@@ -26,6 +27,12 @@ export class DatabaseService {
         return getDatabase().prepare(sql).run(params);
     }
 
+    // Transaction support
+    static transaction<T>(fn: (db: Database.Database) => T): T {
+        const database = getDatabase();
+        return database.transaction(fn)(database);
+    }
+
     // Cache methods
     static getCached<T = any>(key: string): T | undefined {
         return cache.get<T>(key);
@@ -33,5 +40,13 @@ export class DatabaseService {
 
     static setCached<T = any>(key: string, value: T, ttl = 3600): boolean {
         return cache.set(key, value, ttl);
+    }
+
+    static clearCache(key?: string): void {
+        if (key) {
+            cache.del(key);
+        } else {
+            cache.flushAll();
+        }
     }
 }

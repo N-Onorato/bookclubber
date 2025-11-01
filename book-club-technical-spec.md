@@ -2,11 +2,11 @@
 
 ## Tech Stack
 - **Framework**: Next.js (App Router)
-- **Database**: SQLite
-- **ORM**: Prisma (recommended) or Drizzle
-- **Authentication**: NextAuth.js or Clerk
+- **Database**: SQLite with WAL mode
+- **Database Layer**: Raw SQLite with custom service layer
+- **Authentication**: Custom session-based auth with HTTP-only cookies
 - **State Management**: React Context + SWR or TanStack Query
-- **Styling**: (TBD - Tailwind, CSS Modules, etc.)
+- **Styling**: Tailwind CSS
 
 ---
 
@@ -485,7 +485,7 @@ interface Session {
 ```typescript
 // Use for initial page loads
 async function BooksPage() {
-  const books = await db.books.findMany();
+  const books = await dbService.getBooks();
   return <BookGrid books={books} />;
 }
 ```
@@ -590,11 +590,9 @@ return NextResponse.json(
 
 ### Environment Variables
 ```env
-DATABASE_URL="file:./dev.db"
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="..."
-OPEN_LIBRARY_API="..."
-GOOGLE_BOOKS_API_KEY="..."
+DATABASE_PATH="./data/bookclub.db"
+SESSION_SECRET="your-session-secret"
+NODE_ENV="development"
 ```
 
 ### SQLite Considerations

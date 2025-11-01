@@ -1,79 +1,258 @@
--- users table
+-- Book Club Database Schema
+-- SQLite with WAL mode
+-- Uses TEXT PRIMARY KEYs (UUIDs) for all tables
+
+-- ============================================================================
+-- CORE TABLES
+-- ============================================================================
+
+-- Users & Authentication
 CREATE TABLE users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    first_name TEXT NOT NULL,
-    last_name TEXT NOT NULL,
-    role TEXT DEFAULT 'member' CHECK (role IN ('admin', 'member')),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT 1
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  role TEXT DEFAULT 'member' CHECK (role IN ('member', 'admin')),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- books (cached from Open Library)
+-- Sessions (for auth)
+CREATE TABLE sessions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Books
 CREATE TABLE books (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    open_library_id TEXT UNIQUE,
-    isbn TEXT,
-    title TEXT NOT NULL,
-    authors TEXT, -- JSON string for simplicity
-    publish_year INTEGER,
-    page_count INTEGER,
-    cover_url TEXT,
-    description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  author TEXT NOT NULL,
+  isbn TEXT,
+  cover_url TEXT,
+  description TEXT,
+  page_count INTEGER,
+  publication_date DATE,
+
+  -- Metadata
+  is_series BOOLEAN DEFAULT FALSE,
+  series_name TEXT,
+  series_position INTEGER,
+
+  -- Tracking
+  suggested_by_user_id TEXT REFERENCES users(id),
+  suggestion_cycle_id TEXT REFERENCES cycles(id),
+
+  -- Status
+  status TEXT DEFAULT 'suggested' CHECK (status IN ('suggested', 'voting', 'reading', 'completed')),
+  completed_at DATETIME,
+
+  -- System
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  deleted_at DATETIME -- soft delete
 );
 
--- book_suggestions
-CREATE TABLE book_suggestions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    book_id INTEGER REFERENCES books(id),
-    suggested_by INTEGER REFERENCES users(id),
-    reason TEXT,
-    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'selected', 'rejected')),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+-- Suggestion/Voting Cycles
+CREATE TABLE cycles (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL CHECK (type IN ('suggestion', 'voting')),
+  theme TEXT, -- optional theme requirement
+  starts_at DATETIME NOT NULL,
+  ends_at DATETIME NOT NULL,
+  is_active BOOLEAN DEFAULT FALSE,
+  winner_book_id TEXT REFERENCES books(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- book_selections (approved books for reading)
-CREATE TABLE book_selections (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    book_id INTEGER REFERENCES books(id),
-    selected_by INTEGER REFERENCES users(id),
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    status TEXT DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'current', 'completed')),
-    notes TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+-- Book Suggestions (tracks per-cycle limits)
+CREATE TABLE suggestions (
+  id TEXT PRIMARY KEY,
+  cycle_id TEXT NOT NULL REFERENCES cycles(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(cycle_id, user_id, book_id)
 );
 
--- reading_sessions (flexible breakdowns)
-CREATE TABLE reading_sessions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    book_selection_id INTEGER REFERENCES book_selections(id),
-    session_number INTEGER NOT NULL,
-    title TEXT NOT NULL, -- "Chapters 1-3", "Pages 1-50", etc.
-    description TEXT,
-    start_page INTEGER,
-    end_page INTEGER,
-    start_chapter TEXT,
-    end_chapter TEXT,
-    session_date DATE NOT NULL,
-    notes TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- Simple voting (one vote per user per suggestion)
+-- Votes
 CREATE TABLE votes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    suggestion_id INTEGER REFERENCES book_suggestions(id),
-    user_id INTEGER REFERENCES users(id),
-    vote_type TEXT CHECK (vote_type IN ('up', 'down')),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(suggestion_id, user_id)
+  id TEXT PRIMARY KEY,
+  cycle_id TEXT NOT NULL REFERENCES cycles(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(cycle_id, user_id, book_id)
 );
 
--- Basic indexes
-CREATE INDEX idx_books_title ON books(title);
+-- Reading Schedule
+CREATE TABLE reading_chunks (
+  id TEXT PRIMARY KEY,
+  book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+  chunk_number INTEGER NOT NULL,
+  start_chapter TEXT,
+  end_chapter TEXT,
+  start_page INTEGER,
+  end_page INTEGER,
+  due_date DATE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Meetings
+CREATE TABLE meetings (
+  id TEXT PRIMARY KEY,
+  reading_chunk_id TEXT REFERENCES reading_chunks(id) ON DELETE SET NULL,
+  scheduled_at DATETIME NOT NULL,
+  is_tentative BOOLEAN DEFAULT FALSE,
+  is_skipped BOOLEAN DEFAULT FALSE,
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Author Blocklist
+CREATE TABLE blocked_authors (
+  id TEXT PRIMARY KEY,
+  author_name TEXT UNIQUE NOT NULL,
+  reason TEXT,
+  blocked_by_user_id TEXT REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Themes for wheel
+CREATE TABLE themes (
+  id TEXT PRIMARY KEY,
+  theme_text TEXT UNIQUE NOT NULL,
+  used_count INTEGER DEFAULT 0,
+  last_used_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================================
+-- PHASE 2 TABLES
+-- ============================================================================
+
+-- Rankings (tier list)
+CREATE TABLE rankings (
+  id TEXT PRIMARY KEY,
+  book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  tier TEXT NOT NULL CHECK (tier IN ('S', 'A', 'B', 'C', 'D', 'F')),
+  ranking_session_id TEXT, -- for group ranking events
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(book_id, user_id, ranking_session_id)
+);
+
+-- ============================================================================
+-- SYSTEM TABLES
+-- ============================================================================
+
+-- Audit Log
+CREATE TABLE audit_log (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES users(id),
+  action TEXT NOT NULL,
+  entity_type TEXT,
+  entity_id TEXT,
+  changes TEXT, -- JSON string
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Events (for future notifications)
+CREATE TABLE events (
+  id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  event_data TEXT, -- JSON string
+  processed_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================================
+-- INDEXES
+-- ============================================================================
+
+-- Users
+CREATE INDEX idx_users_email ON users(email);
+
+-- Sessions
+CREATE INDEX idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX idx_sessions_expires ON sessions(expires_at);
+
+-- Books
+CREATE INDEX idx_books_status ON books(status);
+CREATE INDEX idx_books_suggested_by ON books(suggested_by_user_id);
+CREATE INDEX idx_books_deleted ON books(deleted_at);
+CREATE INDEX idx_books_author ON books(author);
 CREATE INDEX idx_books_isbn ON books(isbn);
-CREATE INDEX idx_suggestions_status ON book_suggestions(status);
-CREATE INDEX idx_selections_status ON book_selections(status);
+
+-- Cycles
+CREATE INDEX idx_cycles_active ON cycles(is_active);
+CREATE INDEX idx_cycles_type ON cycles(type);
+
+-- Suggestions
+CREATE INDEX idx_suggestions_cycle_user ON suggestions(cycle_id, user_id);
+CREATE INDEX idx_suggestions_book ON suggestions(book_id);
+
+-- Votes
+CREATE INDEX idx_votes_cycle_user ON votes(cycle_id, user_id);
+CREATE INDEX idx_votes_cycle_book ON votes(cycle_id, book_id);
+
+-- Reading Chunks
+CREATE INDEX idx_chunks_book ON reading_chunks(book_id);
+CREATE INDEX idx_chunks_due_date ON reading_chunks(due_date);
+
+-- Meetings
+CREATE INDEX idx_meetings_scheduled ON meetings(scheduled_at);
+CREATE INDEX idx_meetings_chunk ON meetings(reading_chunk_id);
+
+-- Rankings
+CREATE INDEX idx_rankings_book ON rankings(book_id);
+CREATE INDEX idx_rankings_user ON rankings(user_id);
+
+-- Events
+CREATE INDEX idx_events_unprocessed ON events(processed_at) WHERE processed_at IS NULL;
+CREATE INDEX idx_events_type ON events(event_type);
+
+-- Audit Log
+CREATE INDEX idx_audit_user ON audit_log(user_id);
+CREATE INDEX idx_audit_entity ON audit_log(entity_type, entity_id);
+CREATE INDEX idx_audit_created ON audit_log(created_at);
+
+-- ============================================================================
+-- TRIGGERS
+-- ============================================================================
+
+-- Auto-update updated_at timestamp for users
+CREATE TRIGGER update_users_updated_at
+  AFTER UPDATE ON users
+  FOR EACH ROW
+  BEGIN
+    UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  END;
+
+-- Auto-update updated_at timestamp for books
+CREATE TRIGGER update_books_updated_at
+  AFTER UPDATE ON books
+  FOR EACH ROW
+  BEGIN
+    UPDATE books SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  END;
+
+-- Auto-update updated_at timestamp for meetings
+CREATE TRIGGER update_meetings_updated_at
+  AFTER UPDATE ON meetings
+  FOR EACH ROW
+  BEGIN
+    UPDATE meetings SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  END;
+
+-- Auto-update updated_at timestamp for rankings
+CREATE TRIGGER update_rankings_updated_at
+  AFTER UPDATE ON rankings
+  FOR EACH ROW
+  BEGIN
+    UPDATE rankings SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  END;
