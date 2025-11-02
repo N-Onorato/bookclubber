@@ -52,6 +52,17 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Check suggestion limit for non-admin users
+        if (user.role !== 'admin') {
+            const userSuggestionCount = await SuggestionService.getUserSuggestionCount(cycleId, user.id);
+            if (userSuggestionCount >= cycle.max_suggestions_per_user) {
+                return NextResponse.json(
+                    { error: `You have reached the maximum of ${cycle.max_suggestions_per_user} suggestion(s) for this cycle` },
+                    { status: 403 }
+                );
+            }
+        }
+
         // Check if book already suggested in this cycle
         const alreadySuggested = await SuggestionService.isBookSuggestedInCycle(cycleId, bookId);
         if (alreadySuggested) {

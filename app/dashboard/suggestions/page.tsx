@@ -10,6 +10,8 @@ interface Cycle {
     starts_at: string;
     ends_at: string;
     is_active: boolean;
+    max_suggestions_per_user: number;
+    max_votes_per_user: number;
 }
 
 interface Suggestion {
@@ -173,9 +175,25 @@ export default function SuggestionsPage() {
     };
 
     const canSuggest = () => {
-        if (!activeCycle) return false;
+        if (!activeCycle || !currentUser) return false;
         // Can suggest if it's a suggestion cycle and we're in the suggestion phase
-        return activeCycle.type === 'suggestion' && phase === 'suggestion';
+        if (activeCycle.type !== 'suggestion' || phase !== 'suggestion') return false;
+
+        // Members are limited, admins can always suggest (with warning)
+        if (currentUser.role === 'admin') return true;
+
+        // Check if member has reached the limit
+        return getUserSuggestionCount() < activeCycle.max_suggestions_per_user;
+    };
+
+    const hasExceededLimit = () => {
+        if (!activeCycle || !currentUser) return false;
+        return getUserSuggestionCount() >= activeCycle.max_suggestions_per_user;
+    };
+
+    const isAtLimit = () => {
+        if (!activeCycle || !currentUser) return false;
+        return getUserSuggestionCount() >= activeCycle.max_suggestions_per_user;
     };
 
     const canDelete = (suggestion: Suggestion) => {
@@ -248,8 +266,18 @@ export default function SuggestionsPage() {
                         </p>
                         <p className="text-sm text-foreground/50 mt-1">
                             Phase: <span className="text-accent">{phase}</span> |
-                            Your suggestions: {getUserSuggestionCount()}
+                            Your suggestions: {getUserSuggestionCount()} / {activeCycle.max_suggestions_per_user}
                         </p>
+                        {currentUser?.role === 'admin' && hasExceededLimit() && (
+                            <p className="text-sm text-yellow-400 mt-2">
+                                ⚠️ You have exceeded the suggestion limit ({activeCycle.max_suggestions_per_user}). Consider removing some suggestions.
+                            </p>
+                        )}
+                        {currentUser?.role === 'member' && isAtLimit() && activeCycle.type === 'suggestion' && phase === 'suggestion' && (
+                            <p className="text-sm text-foreground/60 mt-2">
+                                You have reached the maximum of {activeCycle.max_suggestions_per_user} suggestion(s) for this cycle.
+                            </p>
+                        )}
                     </div>
                     {canSuggest() && (
                         <button
@@ -414,6 +442,15 @@ export default function SuggestionsPage() {
                                         )}
                                     </div>
                                 </div>
+
+                                {currentUser?.role === 'admin' && hasExceededLimit() && (
+                                    <div className="mb-4 p-3 bg-yellow-400/10 border border-yellow-400/30 rounded-lg">
+                                        <p className="text-yellow-400 text-sm">
+                                            ⚠️ You are about to exceed the suggestion limit of {activeCycle?.max_suggestions_per_user}.
+                                            As an admin, you can still add this suggestion.
+                                        </p>
+                                    </div>
+                                )}
 
                                 <div className="mb-4">
                                     <label className="block text-foreground/70 text-sm mb-2">
