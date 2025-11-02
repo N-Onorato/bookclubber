@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SuggestionService } from '@/lib/services/suggestionService';
-import { CycleService } from '@/lib/services/cycleService';
+import { PhaseService } from '@/lib/services/phaseService';
 import { getCurrentUser } from '@/lib/auth';
 
 /**
@@ -17,63 +17,63 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { cycleId, bookId, reason } = await request.json();
+        const { phaseId, bookId, reason } = await request.json();
 
         // Validation
-        if (!cycleId || !bookId) {
+        if (!phaseId || !bookId) {
             return NextResponse.json(
-                { error: 'Cycle ID and Book ID are required' },
+                { error: 'Phase ID and Book ID are required' },
                 { status: 400 }
             );
         }
 
-        // Check if cycle exists and is active
-        const cycle = await CycleService.getCycleById(cycleId);
-        if (!cycle) {
+        // Check if phase exists and is active
+        const phase = await PhaseService.getPhaseById(phaseId);
+        if (!phase) {
             return NextResponse.json(
-                { error: 'Cycle not found' },
+                { error: 'Phase not found' },
                 { status: 404 }
             );
         }
 
-        // Check if cycle is a suggestion cycle
-        if (cycle.type !== 'suggestion') {
+        // Check if phase is a suggestion phase
+        if (phase.type !== 'suggestion') {
             return NextResponse.json(
-                { error: 'This is not a suggestion cycle' },
+                { error: 'This is not a suggestion phase' },
                 { status: 400 }
             );
         }
 
-        // Check if we're within the cycle dates
-        if (!CycleService.isCycleActive(cycle)) {
+        // Check if we're within the phase dates
+        if (!PhaseService.isPhaseActive(phase)) {
             return NextResponse.json(
-                { error: 'This cycle is not currently active (outside date range)' },
+                { error: 'This phase is not currently active (outside date range)' },
                 { status: 400 }
             );
         }
 
         // Check suggestion limit for non-admin users
         if (user.role !== 'admin') {
-            const userSuggestionCount = await SuggestionService.getUserSuggestionCount(cycleId, user.id);
-            if (userSuggestionCount >= cycle.max_suggestions_per_user) {
+            const userSuggestionCount = await SuggestionService.getUserSuggestionCount(phaseId, user.id);
+            if (userSuggestionCount >= phase.max_suggestions_per_user) {
                 return NextResponse.json(
-                    { error: `You have reached the maximum of ${cycle.max_suggestions_per_user} suggestion(s) for this cycle` },
+                    { error: `You have reached the maximum of ${phase.max_suggestions_per_user} suggestion(s) for this phase` },
                     { status: 403 }
                 );
             }
         }
 
-        // Check if book already suggested in this cycle
-        const alreadySuggested = await SuggestionService.isBookSuggestedInCycle(cycleId, bookId);
+        // Check if book already suggested in this phase
+        const alreadySuggested = await SuggestionService.isBookSuggestedInPhase(phaseId, bookId);
         if (alreadySuggested) {
             return NextResponse.json(
-                { error: 'This book has already been suggested in this cycle' },
+                { error: 'This book has already been suggested in this phase' },
                 { status: 409 }
             );
         }
 
         const suggestion = await SuggestionService.createSuggestion(
-            cycleId,
+            phaseId,
             user.id,
             bookId,
             reason
@@ -100,7 +100,8 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET /api/suggestions?cycleId=xxx - Get suggestions for a cycle
+ * GET /api/suggestions?phaseId=xxx - Get suggestions for a phase
+ * If phaseId is a voting phase, automatically finds and returns suggestions from the related suggestion phase
  */
 export async function GET(request: NextRequest) {
     try {
@@ -114,16 +115,26 @@ export async function GET(request: NextRequest) {
         }
 
         const { searchParams } = new URL(request.url);
-        const cycleId = searchParams.get('cycleId');
+        let phaseId = searchParams.get('phaseId');
 
-        if (!cycleId) {
+        if (!phaseId) {
             return NextResponse.json(
-                { error: 'Cycle ID is required' },
+                { error: 'Phase ID is required' },
                 { status: 400 }
             );
         }
 
-        const suggestions = await SuggestionService.getSuggestionsWithDetails(cycleId);
+        // Check if this is a voting phase - if so, get the related suggestion phase
+        const phase = await PhaseService.getPhaseById(phaseId);
+        if (phase && phase.type === 'voting') {
+            // Find the suggestion phase for this voting phase
+            const suggestionPhase = await PhaseService.getSuggestionPhaseForVoting(phaseId);
+            if (suggestionPhase) {
+                phaseId = suggestionPhase.id;
+            }
+        }
+
+        const suggestions = await SuggestionService.getSuggestionsWithDetails(phaseId);
 
         return NextResponse.json({ suggestions });
     } catch (error) {

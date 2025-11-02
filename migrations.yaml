@@ -293,3 +293,182 @@ migrations:
       -- If we need to rollback, we would recreate the table without these columns
       -- For now, setting them to NULL is sufficient for a down migration
       UPDATE books SET local_cover_path = NULL, original_cover_url = NULL;
+  - version: 4
+    name: "Refactor cycles to cycles+phases architecture"
+    description: "Rename current 'cycles' table to 'phases' and create new top-level 'cycles' table. This allows phases (suggestion, voting) to be linked under a single cycle."
+    reversible: true
+    up: |
+      -- ============================================================================
+      -- STEP 1: Rename cycles table to phases and update structure
+      -- ============================================================================
+
+      -- Rename the existing cycles table to phases
+      ALTER TABLE cycles RENAME TO phases;
+
+      -- Drop old indexes
+      DROP INDEX IF EXISTS idx_cycles_active;
+      DROP INDEX IF EXISTS idx_cycles_type;
+
+      -- ============================================================================
+      -- STEP 2: Create new cycles table (top-level entity)
+      -- ============================================================================
+
+      CREATE TABLE cycles (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        theme TEXT,
+        winner_book_id TEXT REFERENCES books(id),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- ============================================================================
+      -- STEP 3: Add cycle_id to phases table
+      -- ============================================================================
+
+      -- Add cycle_id column to phases (will be populated in next step)
+      ALTER TABLE phases ADD COLUMN cycle_id TEXT REFERENCES cycles(id) ON DELETE CASCADE;
+
+      -- ============================================================================
+      -- STEP 4: Migrate existing data
+      -- ============================================================================
+
+      -- For each existing phase, create a corresponding cycle
+      -- Group suggestion+voting pairs by theme, or create individual cycles
+      INSERT INTO cycles (id, name, theme, winner_book_id, created_at)
+      SELECT
+        LOWER(HEX(RANDOMBLOB(16))),
+        COALESCE(theme, 'Cycle ' || SUBSTR(id, 1, 8)),
+        theme,
+        winner_book_id,
+        MIN(created_at)
+      FROM phases
+      GROUP BY theme, winner_book_id;
+
+      -- Update phases to link to their cycles
+      -- If phases share a theme, link them to the same cycle
+      UPDATE phases
+      SET cycle_id = (
+        SELECT c.id
+        FROM cycles c
+        WHERE c.theme = phases.theme
+          OR (c.theme IS NULL AND phases.theme IS NULL)
+        LIMIT 1
+      );
+
+      -- For any orphaned phases without a cycle, create a cycle
+      INSERT INTO cycles (id, name, created_at)
+      SELECT
+        LOWER(HEX(RANDOMBLOB(16))),
+        'Cycle for ' || type || ' phase',
+        created_at
+      FROM phases
+      WHERE cycle_id IS NULL;
+
+      -- Link orphaned phases
+      UPDATE phases
+      SET cycle_id = (
+        SELECT c.id
+        FROM cycles c
+        WHERE c.created_at = phases.created_at
+        LIMIT 1
+      )
+      WHERE cycle_id IS NULL;
+
+      -- ============================================================================
+      -- STEP 5: Update suggestions and votes tables
+      -- ============================================================================
+
+      -- Rename cycle_id to phase_id in suggestions
+      ALTER TABLE suggestions RENAME COLUMN cycle_id TO phase_id;
+
+      -- Rename cycle_id to phase_id in votes
+      ALTER TABLE votes RENAME COLUMN cycle_id TO phase_id;
+
+      -- ============================================================================
+      -- STEP 6: Update books table reference
+      -- ============================================================================
+
+      -- The books.suggestion_cycle_id now refers to a phase, not a cycle
+      -- We'll update it to suggestion_phase_id for clarity
+      ALTER TABLE books RENAME COLUMN suggestion_cycle_id TO suggestion_phase_id;
+
+      -- ============================================================================
+      -- STEP 7: Move winner_book_id from phases to cycles
+      -- ============================================================================
+
+      -- Update cycles.winner_book_id from phases
+      UPDATE cycles
+      SET winner_book_id = (
+        SELECT p.winner_book_id
+        FROM phases p
+        WHERE p.cycle_id = cycles.id
+          AND p.winner_book_id IS NOT NULL
+        LIMIT 1
+      );
+
+      -- Remove winner_book_id from phases (no longer needed at phase level)
+      -- Note: SQLite doesn't support DROP COLUMN easily, so we'll leave it for now
+      -- but document that it's deprecated and should use cycles.winner_book_id
+
+      -- ============================================================================
+      -- STEP 8: Create new indexes
+      -- ============================================================================
+
+      CREATE INDEX idx_phases_cycle ON phases(cycle_id);
+      CREATE INDEX idx_phases_type ON phases(type);
+      CREATE INDEX idx_phases_active ON phases(is_active);
+      CREATE INDEX idx_phases_dates ON phases(starts_at, ends_at);
+
+      CREATE INDEX idx_suggestions_phase_user ON suggestions(phase_id, user_id);
+      CREATE INDEX idx_votes_phase_user ON votes(phase_id, user_id);
+      CREATE INDEX idx_votes_phase_book ON votes(phase_id, book_id);
+
+      -- ============================================================================
+      -- STEP 9: Create trigger for cycles updated_at
+      -- ============================================================================
+
+      CREATE TRIGGER update_cycles_updated_at
+        AFTER UPDATE ON cycles
+        FOR EACH ROW
+      BEGIN
+        UPDATE cycles SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+      END;
+    down: |
+      -- ============================================================================
+      -- ROLLBACK: Restore original cycles table structure
+      -- ============================================================================
+
+      -- Drop new indexes
+      DROP INDEX IF EXISTS idx_phases_cycle;
+      DROP INDEX IF EXISTS idx_phases_type;
+      DROP INDEX IF EXISTS idx_phases_active;
+      DROP INDEX IF EXISTS idx_phases_dates;
+
+      -- Rename phase_id back to cycle_id in suggestions and votes
+      ALTER TABLE suggestions RENAME COLUMN phase_id TO cycle_id;
+      ALTER TABLE votes RENAME COLUMN phase_id TO cycle_id;
+
+      -- Rename suggestion_phase_id back to suggestion_cycle_id in books
+      ALTER TABLE books RENAME COLUMN suggestion_phase_id TO suggestion_cycle_id;
+
+      -- Drop cycle_id column from phases
+      -- SQLite limitation: can't drop column, so we recreate the table
+      CREATE TABLE phases_backup AS
+      SELECT id, type, theme, starts_at, ends_at, is_active, winner_book_id,
+             max_suggestions_per_user, max_votes_per_user, created_at
+      FROM phases;
+
+      DROP TABLE phases;
+      ALTER TABLE phases_backup RENAME TO cycles;
+
+      -- Drop the cycles table
+      DROP TABLE cycles;
+      DROP TRIGGER IF EXISTS update_cycles_updated_at;
+
+      -- Recreate original indexes
+      CREATE INDEX idx_cycles_active ON cycles(is_active);
+      CREATE INDEX idx_cycles_type ON cycles(type);
+      CREATE INDEX idx_suggestions_cycle_user ON suggestions(cycle_id, user_id);
+      CREATE INDEX idx_votes_cycle_user ON votes(cycle_id, user_id);
+      CREATE INDEX idx_votes_cycle_book ON votes(cycle_id, book_id);

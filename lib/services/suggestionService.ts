@@ -8,7 +8,7 @@ export class SuggestionService {
      * Create a new book suggestion
      */
     static async createSuggestion(
-        cycleId: string,
+        phaseId: string,
         userId: string,
         bookId: string,
         reason?: string
@@ -16,11 +16,11 @@ export class SuggestionService {
         try {
             const db = getDatabase();
 
-            // Check if user already suggested this book in this cycle
+            // Check if user already suggested this book in this phase
             const existingSuggestion = db.prepare(`
                 SELECT id FROM suggestions
-                WHERE cycle_id = ? AND user_id = ? AND book_id = ?
-            `).get(cycleId, userId, bookId);
+                WHERE phase_id = ? AND user_id = ? AND book_id = ?
+            `).get(phaseId, userId, bookId);
 
             if (existingSuggestion) {
                 return null; // Already suggested
@@ -30,11 +30,11 @@ export class SuggestionService {
             const now = new Date().toISOString();
 
             const stmt = db.prepare(`
-                INSERT INTO suggestions (id, cycle_id, user_id, book_id, reason, created_at, updated_at)
+                INSERT INTO suggestions (id, phase_id, user_id, book_id, reason, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             `);
 
-            stmt.run(suggestionId, cycleId, userId, bookId, reason || null, now, now);
+            stmt.run(suggestionId, phaseId, userId, bookId, reason || null, now, now);
 
             const suggestion = db.prepare('SELECT * FROM suggestions WHERE id = ?').get(suggestionId) as Suggestion;
             return suggestion;
@@ -54,27 +54,27 @@ export class SuggestionService {
     }
 
     /**
-     * Get all suggestions for a cycle
+     * Get all suggestions for a phase
      */
-    static async getSuggestionsByCycle(cycleId: string): Promise<Suggestion[]> {
+    static async getSuggestionsByPhase(phaseId: string): Promise<Suggestion[]> {
         const db = getDatabase();
         return db.prepare(`
             SELECT * FROM suggestions
-            WHERE cycle_id = ?
+            WHERE phase_id = ?
             ORDER BY created_at ASC
-        `).all(cycleId) as Suggestion[];
+        `).all(phaseId) as Suggestion[];
     }
 
     /**
-     * Get suggestions by user for a cycle
+     * Get suggestions by user for a phase
      */
-    static async getUserSuggestionsForCycle(cycleId: string, userId: string): Promise<Suggestion[]> {
+    static async getUserSuggestionsForPhase(phaseId: string, userId: string): Promise<Suggestion[]> {
         const db = getDatabase();
         return db.prepare(`
             SELECT * FROM suggestions
-            WHERE cycle_id = ? AND user_id = ?
+            WHERE phase_id = ? AND user_id = ?
             ORDER BY created_at ASC
-        `).all(cycleId, userId) as Suggestion[];
+        `).all(phaseId, userId) as Suggestion[];
     }
 
     /**
@@ -127,12 +127,12 @@ export class SuggestionService {
     /**
      * Get suggestions with book and user details
      */
-    static async getSuggestionsWithDetails(cycleId: string): Promise<any[]> {
+    static async getSuggestionsWithDetails(phaseId: string): Promise<any[]> {
         const db = getDatabase();
         const suggestions = db.prepare(`
             SELECT
                 s.id,
-                s.cycle_id,
+                s.phase_id,
                 s.user_id,
                 s.book_id,
                 s.reason,
@@ -149,9 +149,9 @@ export class SuggestionService {
             FROM suggestions s
             JOIN books b ON s.book_id = b.id
             JOIN users u ON s.user_id = u.id
-            WHERE s.cycle_id = ?
+            WHERE s.phase_id = ?
             ORDER BY s.created_at ASC
-        `).all(cycleId) as any[];
+        `).all(phaseId) as any[];
 
         // Transform to include proper cover_image_url
         return suggestions.map(suggestion => ({
@@ -163,29 +163,29 @@ export class SuggestionService {
     }
 
     /**
-     * Get user's suggestion count for a cycle
+     * Get user's suggestion count for a phase
      */
-    static async getUserSuggestionCount(cycleId: string, userId: string): Promise<number> {
+    static async getUserSuggestionCount(phaseId: string, userId: string): Promise<number> {
         const db = getDatabase();
         const result = db.prepare(`
             SELECT COUNT(*) as count
             FROM suggestions
-            WHERE cycle_id = ? AND user_id = ?
-        `).get(cycleId, userId) as { count: number };
+            WHERE phase_id = ? AND user_id = ?
+        `).get(phaseId, userId) as { count: number };
 
         return result.count;
     }
 
     /**
-     * Check if a book has already been suggested in a cycle
+     * Check if a book has already been suggested in a phase
      */
-    static async isBookSuggestedInCycle(cycleId: string, bookId: string): Promise<boolean> {
+    static async isBookSuggestedInPhase(phaseId: string, bookId: string): Promise<boolean> {
         const db = getDatabase();
         const result = db.prepare(`
             SELECT COUNT(*) as count
             FROM suggestions
-            WHERE cycle_id = ? AND book_id = ?
-        `).get(cycleId, bookId) as { count: number };
+            WHERE phase_id = ? AND book_id = ?
+        `).get(phaseId, bookId) as { count: number };
 
         return result.count > 0;
     }

@@ -2,20 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-
-interface Cycle {
-    id: string;
-    type: 'suggestion' | 'voting';
-    theme?: string;
-    starts_at: string;
-    ends_at: string;
-    is_active: boolean;
-    max_suggestions_per_user: number;
-    max_votes_per_user: number;
-}
+import { CycleWithPhases, Phase } from '@/lib/types';
 
 export default function AdminPage() {
-    const [cycles, setCycles] = useState<Cycle[]>([]);
+    const [cycles, setCycles] = useState<CycleWithPhases[]>([]);
     const [loading, setLoading] = useState(true);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [formData, setFormData] = useState({
@@ -74,11 +64,31 @@ export default function AdminPage() {
         e.preventDefault();
 
         try {
-            // Create suggestion cycle
+            // Step 1: Create the top-level cycle
+            const cycleResponse = await fetch('/api/cycles/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: formData.theme ? `${formData.theme} Cycle` : undefined,
+                    theme: formData.theme || undefined
+                })
+            });
+
+            if (!cycleResponse.ok) {
+                const data = await cycleResponse.json();
+                alert(`Error creating cycle: ${data.error}`);
+                return;
+            }
+
+            const cycleData = await cycleResponse.json();
+            const cycleId = cycleData.cycle.id;
+
+            // Step 2: Create suggestion phase
             const suggestionResponse = await fetch('/api/cycles', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    cycleId,
                     type: 'suggestion',
                     startsAt: formData.suggestionStart,
                     endsAt: formData.votingStart,
@@ -90,15 +100,16 @@ export default function AdminPage() {
 
             if (!suggestionResponse.ok) {
                 const data = await suggestionResponse.json();
-                alert(`Error creating suggestion cycle: ${data.error}`);
+                alert(`Error creating suggestion phase: ${data.error}`);
                 return;
             }
 
-            // Create voting cycle
+            // Step 3: Create voting phase
             const votingResponse = await fetch('/api/cycles', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    cycleId,
                     type: 'voting',
                     startsAt: formData.votingStart,
                     endsAt: formData.votingEnd,
@@ -110,7 +121,7 @@ export default function AdminPage() {
 
             if (!votingResponse.ok) {
                 const data = await votingResponse.json();
-                alert(`Error creating voting cycle: ${data.error}`);
+                alert(`Error creating voting phase: ${data.error}`);
                 return;
             }
 
@@ -126,13 +137,13 @@ export default function AdminPage() {
             });
             loadCycles();
         } catch (error) {
-            console.error('Error creating cycles:', error);
-            alert('Failed to create cycles');
+            console.error('Error creating cycle:', error);
+            alert('Failed to create cycle');
         }
     };
 
-    const handleDeleteCycle = async (cycleId: string, cycleType: string) => {
-        if (!confirm(`Are you sure you want to delete this ${cycleType} cycle? This will also delete all associated suggestions and votes.`)) {
+    const handleDeleteCycle = async (cycleId: string) => {
+        if (!confirm('Are you sure you want to delete this cycle? This will also delete all phases and associated suggestions and votes.')) {
             return;
         }
 
@@ -153,11 +164,11 @@ export default function AdminPage() {
         }
     };
 
-    // Check if a cycle is currently active based on dates
-    const isCycleCurrentlyActive = (cycle: Cycle) => {
+    // Check if a phase is currently active based on dates
+    const isPhaseCurrentlyActive = (phase: Phase) => {
         const now = new Date();
-        const start = new Date(cycle.starts_at);
-        const end = new Date(cycle.ends_at);
+        const start = new Date(phase.starts_at);
+        const end = new Date(phase.ends_at);
         return now >= start && now <= end;
     };
 
@@ -293,8 +304,8 @@ export default function AdminPage() {
                             </div>
 
                             <p className="text-sm text-foreground/50 italic">
-                                This will create both a suggestion cycle and a voting cycle as a pair.
-                                Cycles automatically become active based on the dates you set.
+                                This will create a cycle with two phases: a suggestion phase followed by a voting phase.
+                                Phases automatically become active based on the dates you set.
                             </p>
                         </div>
 
@@ -319,10 +330,11 @@ export default function AdminPage() {
                         <p className="text-foreground/60">No cycles created yet</p>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                         {cycles.map((cycle) => {
-                            const isActive = isCycleCurrentlyActive(cycle);
-                            const hasEnded = new Date() > new Date(cycle.ends_at);
+                            const suggestionPhase = cycle.phases?.find((p: Phase) => p.type === 'suggestion');
+                            const votingPhase = cycle.phases?.find((p: Phase) => p.type === 'voting');
+                            const hasActivePhase = cycle.phases?.some((p: Phase) => isPhaseCurrentlyActive(p));
 
                             return (
                                 <div
@@ -333,45 +345,84 @@ export default function AdminPage() {
                                         <div className="flex-1">
                                             <div className="flex items-center gap-3 mb-2">
                                                 <h3 className="text-xl font-serif font-semibold text-foreground">
-                                                    {cycle.type === 'suggestion' ? '📚 Suggestion' : '🗳️ Voting'} Cycle
+                                                    {cycle.name || (cycle.theme ? `${cycle.theme} Cycle` : 'Unnamed Cycle')}
                                                 </h3>
-                                                <span className={`inline-block px-3 py-1 rounded-full text-xs ${
-                                                    isActive ? 'bg-green-500/20 text-green-400' :
-                                                    hasEnded ? 'bg-gray-500/20 text-gray-400' :
-                                                    'bg-yellow-500/20 text-yellow-400'
-                                                }`}>
-                                                    {isActive ? 'Active Now' : hasEnded ? 'Completed' : 'Upcoming'}
-                                                </span>
+                                                {hasActivePhase && (
+                                                    <span className="inline-block px-3 py-1 rounded-full text-xs bg-green-500/20 text-green-400">
+                                                        Active
+                                                    </span>
+                                                )}
                                             </div>
                                             {cycle.theme && (
                                                 <p className="text-foreground/60 text-sm">Theme: {cycle.theme}</p>
                                             )}
+                                            <p className="text-foreground/40 text-xs mt-1">
+                                                Created {new Date(cycle.created_at).toLocaleDateString()}
+                                            </p>
                                         </div>
                                         <button
-                                            onClick={() => handleDeleteCycle(cycle.id, cycle.type)}
+                                            onClick={() => handleDeleteCycle(cycle.id)}
                                             className="ml-4 px-3 py-1 text-sm bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 hover:bg-red-500/30 transition-colors"
                                         >
-                                            Delete
+                                            Delete Cycle
                                         </button>
                                     </div>
 
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-foreground/60">
-                                        <div>
-                                            <div className="font-medium">Starts</div>
-                                            <div>{new Date(cycle.starts_at).toLocaleString()}</div>
-                                        </div>
-                                        <div>
-                                            <div className="font-medium">Ends</div>
-                                            <div>{new Date(cycle.ends_at).toLocaleString()}</div>
-                                        </div>
-                                        <div>
-                                            <div className="font-medium">Max Suggestions</div>
-                                            <div>{cycle.max_suggestions_per_user} per user</div>
-                                        </div>
-                                        <div>
-                                            <div className="font-medium">Max Votes</div>
-                                            <div>{cycle.max_votes_per_user} per user</div>
-                                        </div>
+                                    {/* Phases */}
+                                    <div className="space-y-3 mt-4">
+                                        {suggestionPhase && (
+                                            <div className="p-4 bg-[#27272A]/40 rounded-lg border border-[#27272A]">
+                                                <div className="flex items-center gap-3 mb-2">
+                                                    <h4 className="text-sm font-semibold text-foreground">📚 Suggestion Phase</h4>
+                                                    {isPhaseCurrentlyActive(suggestionPhase) && (
+                                                        <span className="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400">
+                                                            Active Now
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-foreground/60">
+                                                    <div>
+                                                        <div className="font-medium">Starts</div>
+                                                        <div>{new Date(suggestionPhase.starts_at).toLocaleString()}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-medium">Ends</div>
+                                                        <div>{new Date(suggestionPhase.ends_at).toLocaleString()}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-medium">Max Per User</div>
+                                                        <div>{suggestionPhase.max_suggestions_per_user}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {votingPhase && (
+                                            <div className="p-4 bg-[#27272A]/40 rounded-lg border border-[#27272A]">
+                                                <div className="flex items-center gap-3 mb-2">
+                                                    <h4 className="text-sm font-semibold text-foreground">🗳️ Voting Phase</h4>
+                                                    {isPhaseCurrentlyActive(votingPhase) && (
+                                                        <span className="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400">
+                                                            Active Now
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-foreground/60">
+                                                    <div>
+                                                        <div className="font-medium">Starts</div>
+                                                        <div>{new Date(votingPhase.starts_at).toLocaleString()}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-medium">Ends</div>
+                                                        <div>{new Date(votingPhase.ends_at).toLocaleString()}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-medium">Max Per User</div>
+                                                        <div>{votingPhase.max_votes_per_user}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             );

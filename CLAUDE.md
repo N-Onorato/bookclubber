@@ -1,12 +1,14 @@
 # Auto-Documentation Note
 
-**For Claude:** When making significant changes, update this file with critical patterns and gotchas. Keep it under 200 lines.
+**For Claude:** When making significant changes, update this file with critical
+patterns and gotchas. Keep it under 300 lines.
 
 ## Critical Patterns & Gotchas
 
 ### Database Connection Pattern ⚠️
 
-**ALWAYS** use `getDatabase()` from [lib/db/connection.ts](lib/db/connection.ts):
+**ALWAYS** use `getDatabase()` from
+[lib/db/connection.ts](lib/db/connection.ts):
 
 ```typescript
 import { getDatabase } from "../db/connection";
@@ -37,15 +39,25 @@ const user = db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
 - bcrypt password hashing (10 rounds)
 - 30-day session expiration
 - **Service**: [lib/services/authService.ts](lib/services/authService.ts)
-- **Helpers**: [lib/auth.ts](lib/auth.ts) - `getCurrentUser()`, `requireAuth()`, `requireAdmin()`
+- **Helpers**: [lib/auth.ts](lib/auth.ts) - `getCurrentUser()`, `requireAuth()`,
+  `requireAdmin()`
 
 ## Key Files
 
-- [lib/db/connection.ts](lib/db/connection.ts) - Database connection (use `getDatabase()`)
+- [lib/db/connection.ts](lib/db/connection.ts) - Database connection (use
+  `getDatabase()`)
 - [lib/db/schema.sql](lib/db/schema.sql) - Schema reference
 - [lib/types.ts](lib/types.ts) - TypeScript definitions
 - [migrations.yaml](migrations.yaml) - Migration definitions
 - [lib/services/*](lib/services/) - Business logic layer
+
+### Documentation
+
+- [book-club-product-spec.md](book-club-product-spec.md) - The product vision
+- [book-club-style-spec.md](book-club-style-spec.md) - The brand and style
+  philosophy
+- [book-club-technical-spec.md](book-club-technical-spec.md) - Technical details
+  for the product.
 
 ## Common Commands
 
@@ -66,13 +78,33 @@ sqlite3 bookclubber.db ".schema"
 
 ## Database Schema
 
-**Core**: users (UUID PKs), sessions, books (with `local_cover_path`), cycles, suggestions, votes, reading_chunks, meetings
+### Cycles & Phases Architecture ⚠️
+
+**IMPORTANT**: The system uses a two-level hierarchy:
+
+- **Cycles**: Top-level entities representing a complete book selection process (e.g., "Spring 2024 Cycle")
+- **Phases**: Stages within a cycle (e.g., suggestion phase, then voting phase)
+
+**Tables**:
+- `cycles` - Top-level (has `name`, `theme`, `winner_book_id`)
+- `phases` - Linked to cycles via `cycle_id` (has `type`, `starts_at`, `ends_at`, `max_suggestions_per_user`, `max_votes_per_user`)
+- `suggestions` - Linked to phases via `phase_id`
+- `votes` - Linked to phases via `phase_id`
+
+**Services**:
+- [lib/services/cycleService.ts](lib/services/cycleServiceNew.ts) - Manage cycles
+- [lib/services/phaseService.ts](lib/services/phaseService.ts) - Manage phases
+- Use `PhaseService.getSuggestionPhaseForVoting()` to link voting phase to its suggestions
+
+**Core Tables**: users (UUID PKs), sessions, books (with `local_cover_path`), cycles, phases,
+suggestions, votes, reading_chunks, meetings
 
 **Feature**: blocked_authors, themes, rankings (Phase 2)
 
 **System**: audit_log, events
 
-All tables use UUID primary keys. Foreign keys enforced. Soft deletes on books. Auto-update triggers on timestamps. Never modify existing migrations.
+All tables use UUID primary keys. Foreign keys enforced. Soft deletes on books.
+Auto-update triggers on timestamps. Never modify existing migrations.
 
 ## Tech Stack
 
@@ -93,5 +125,6 @@ NODE_ENV="development"
 ## Default Admin
 
 After `npm run db:init`:
+
 - Email: `admin@bookclub.com`
 - Password: `admin123`

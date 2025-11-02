@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CycleService } from '@/lib/services/cycleService';
+import { CycleService } from '@/lib/services/cycleServiceNew';
+import { PhaseService } from '@/lib/services/phaseService';
 import { requireAuth, requireAdmin } from '@/lib/auth';
 
 /**
- * GET /api/cycles - Get all cycles
+ * GET /api/cycles - Get all cycles with their phases
  */
 export async function GET() {
     try {
         await requireAuth();
-        const cycles = await CycleService.getAllCycles();
+        const cycles = await CycleService.getAllCyclesWithPhases();
 
         return NextResponse.json({ cycles });
     } catch (error) {
@@ -21,13 +22,14 @@ export async function GET() {
 }
 
 /**
- * POST /api/cycles - Create a new cycle (admin only)
+ * POST /api/cycles - Create a new phase within a cycle (admin only)
  */
 export async function POST(request: NextRequest) {
     try {
         await requireAdmin();
 
         const {
+            cycleId,
             type,
             startsAt,
             endsAt,
@@ -37,9 +39,9 @@ export async function POST(request: NextRequest) {
         } = await request.json();
 
         // Validation
-        if (!type || !startsAt || !endsAt) {
+        if (!cycleId || !type || !startsAt || !endsAt) {
             return NextResponse.json(
-                { error: 'Type, start date, and end date are required' },
+                { error: 'Cycle ID, type, start date, and end date are required' },
                 { status: 400 }
             );
         }
@@ -48,6 +50,15 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 { error: 'Type must be either "suggestion" or "voting"' },
                 { status: 400 }
+            );
+        }
+
+        // Verify cycle exists
+        const cycle = await CycleService.getCycleById(cycleId);
+        if (!cycle) {
+            return NextResponse.json(
+                { error: 'Cycle not found' },
+                { status: 404 }
             );
         }
 
@@ -73,7 +84,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const cycle = await CycleService.createCycle(
+        const phase = await PhaseService.createPhase(
+            cycleId,
             type,
             start,
             end,
@@ -84,7 +96,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            cycle
+            phase
         }, { status: 201 });
     } catch (error: any) {
         if (error.message === 'Authentication required' || error.message === 'Admin access required') {
@@ -94,7 +106,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        console.error('Error creating cycle:', error);
+        console.error('Error creating phase:', error);
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }

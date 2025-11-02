@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CycleService } from '@/lib/services/cycleService';
+import { CycleService } from '@/lib/services/cycleServiceNew';
+import { PhaseService } from '@/lib/services/phaseService';
 import { requireAuth, requireAdmin } from '@/lib/auth';
 
 /**
- * GET /api/cycles/[id] - Get a specific cycle
+ * GET /api/cycles/[id] - Get a specific cycle with its phases
  */
 export async function GET(
     request: NextRequest,
@@ -12,7 +13,7 @@ export async function GET(
     try {
         await requireAuth();
 
-        const cycle = await CycleService.getCycleById(params.id);
+        const cycle = await CycleService.getCycleWithPhases(params.id);
 
         if (!cycle) {
             return NextResponse.json(
@@ -48,21 +49,25 @@ export async function PATCH(
     try {
         await requireAdmin();
 
-        const { isActive, winningBookId } = await request.json();
+        const { name, theme, winningBookId } = await request.json();
 
-        if (typeof isActive === 'boolean') {
-            if (isActive) {
-                await CycleService.activateCycle(params.id);
-            } else {
-                await CycleService.deactivateCycle(params.id);
-            }
+        const updates: { name?: string; theme?: string; winner_book_id?: string } = {};
+
+        if (name !== undefined) {
+            updates.name = name;
         }
 
-        if (winningBookId) {
-            await CycleService.setWinningBook(params.id, winningBookId);
+        if (theme !== undefined) {
+            updates.theme = theme;
         }
 
-        const cycle = await CycleService.getCycleById(params.id);
+        if (winningBookId !== undefined) {
+            updates.winner_book_id = winningBookId;
+        }
+
+        await CycleService.updateCycle(params.id, updates);
+
+        const cycle = await CycleService.getCycleWithPhases(params.id);
 
         return NextResponse.json({
             success: true,
@@ -85,7 +90,7 @@ export async function PATCH(
 }
 
 /**
- * DELETE /api/cycles/[id] - Delete a cycle (admin only)
+ * DELETE /api/cycles/[id] - Delete a cycle and all its phases (admin only)
  */
 export async function DELETE(
     request: NextRequest,
@@ -103,7 +108,7 @@ export async function DELETE(
             );
         }
 
-        // Delete the cycle (CASCADE will delete suggestions and votes)
+        // Delete the cycle (CASCADE will delete phases, and phases will cascade delete suggestions and votes)
         await CycleService.deleteCycle(params.id);
 
         return NextResponse.json({

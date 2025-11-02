@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import SuggestionCard from './SuggestionCard';
-import { Cycle, SuggestionWithDetails } from '@/lib/types';
+import { Phase, SuggestionWithDetails } from '@/lib/types';
 
 interface SearchResult {
     openLibraryId: string;
@@ -16,8 +16,7 @@ interface SearchResult {
 }
 
 export default function SuggestionsPage() {
-    const [activeCycle, setActiveCycle] = useState<Cycle | null>(null);
-    const [phase, setPhase] = useState<string>('');
+    const [activePhase, setActivePhase] = useState<Phase | null>(null);
     const [suggestions, setSuggestions] = useState<SuggestionWithDetails[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -28,15 +27,15 @@ export default function SuggestionsPage() {
     const [currentUser, setCurrentUser] = useState<any>(null);
 
     useEffect(() => {
-        loadActiveCycle();
+        loadActivePhase();
         loadCurrentUser();
     }, []);
 
     useEffect(() => {
-        if (activeCycle) {
+        if (activePhase) {
             loadSuggestions();
         }
-    }, [activeCycle]);
+    }, [activePhase]);
 
     const loadCurrentUser = async () => {
         try {
@@ -50,26 +49,25 @@ export default function SuggestionsPage() {
         }
     };
 
-    const loadActiveCycle = async () => {
+    const loadActivePhase = async () => {
         try {
             const response = await fetch('/api/cycles/active');
             if (response.ok) {
                 const data = await response.json();
-                setActiveCycle(data.cycle);
-                setPhase(data.phase);
+                setActivePhase(data.phase);
             }
         } catch (error) {
-            console.error('Error loading active cycle:', error);
+            console.error('Error loading active phase:', error);
         } finally {
             setLoading(false);
         }
     };
 
     const loadSuggestions = async () => {
-        if (!activeCycle) return;
+        if (!activePhase) return;
 
         try {
-            const response = await fetch(`/api/suggestions?cycleId=${activeCycle.id}`);
+            const response = await fetch(`/api/suggestions?phaseId=${activePhase.id}`);
             if (response.ok) {
                 const data = await response.json();
                 setSuggestions(data.suggestions);
@@ -101,7 +99,7 @@ export default function SuggestionsPage() {
     };
 
     const handleSubmitSuggestion = async () => {
-        if (!selectedBook || !activeCycle) return;
+        if (!selectedBook || !activePhase) return;
 
         try {
             // First, create the book in our database
@@ -127,7 +125,7 @@ export default function SuggestionsPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    cycleId: activeCycle.id,
+                    phaseId: activePhase.id,
                     bookId: bookData.book.id,
                     reason: suggestionReason
                 })
@@ -154,25 +152,25 @@ export default function SuggestionsPage() {
     };
 
     const canSuggest = () => {
-        if (!activeCycle || !currentUser) return false;
-        // Can suggest if it's a suggestion cycle and we're in the suggestion phase
-        if (activeCycle.type !== 'suggestion' || phase !== 'suggestion') return false;
+        if (!activePhase || !currentUser) return false;
+        // Can suggest if it's a suggestion phase
+        if (activePhase.type !== 'suggestion') return false;
 
         // Members are limited, admins can always suggest (with warning)
         if (currentUser.role === 'admin') return true;
 
         // Check if member has reached the limit
-        return getUserSuggestionCount() < activeCycle.max_suggestions_per_user;
+        return getUserSuggestionCount() < activePhase.max_suggestions_per_user;
     };
 
     const hasExceededLimit = () => {
-        if (!activeCycle || !currentUser) return false;
-        return getUserSuggestionCount() > activeCycle.max_suggestions_per_user;
+        if (!activePhase || !currentUser) return false;
+        return getUserSuggestionCount() > activePhase.max_suggestions_per_user;
     };
 
     const isAtLimit = () => {
-        if (!activeCycle || !currentUser) return false;
-        return getUserSuggestionCount() >= activeCycle.max_suggestions_per_user;
+        if (!activePhase || !currentUser) return false;
+        return getUserSuggestionCount() >= activePhase.max_suggestions_per_user;
     };
 
     const canDelete = (suggestion: SuggestionWithDetails) => {
@@ -211,7 +209,7 @@ export default function SuggestionsPage() {
         );
     }
 
-    if (!activeCycle) {
+    if (!activePhase) {
         return (
             <div className="min-h-screen p-8">
                 <div className="max-w-6xl mx-auto">
@@ -219,8 +217,8 @@ export default function SuggestionsPage() {
                         ← Back to Dashboard
                     </Link>
                     <div className="p-8 bg-[#18181B]/60 backdrop-blur-lg rounded-2xl border border-[#27272A] text-center">
-                        <h2 className="text-2xl font-serif text-foreground mb-2">No Active Cycle</h2>
-                        <p className="text-foreground/60">There is no active suggestion cycle at the moment.</p>
+                        <h2 className="text-2xl font-serif text-foreground mb-2">No Active Phase</h2>
+                        <p className="text-foreground/60">There is no active phase at the moment.</p>
                     </div>
                 </div>
             </div>
@@ -240,21 +238,20 @@ export default function SuggestionsPage() {
                             Book Suggestions
                         </h1>
                         <p className="text-foreground/60">
-                            {activeCycle.type === 'suggestion' ? '📚 Suggestion Cycle' : '🗳️ Voting Cycle'}
-                            {activeCycle.theme && ` - ${activeCycle.theme}`}
+                            {activePhase.type === 'suggestion' ? '📚 Suggestion Phase' : '🗳️ Voting Phase'}
+                            {activePhase.theme && ` - ${activePhase.theme}`}
                         </p>
                         <p className="text-sm text-foreground/50 mt-1">
-                            Phase: <span className="text-accent">{phase}</span> |
-                            Your suggestions: {getUserSuggestionCount()} / {activeCycle.max_suggestions_per_user}
+                            Your suggestions: {getUserSuggestionCount()} / {activePhase.max_suggestions_per_user}
                         </p>
                         {currentUser?.role === 'admin' && hasExceededLimit() && (
                             <p className="text-sm text-yellow-400 mt-2">
-                                ⚠️ You have exceeded the suggestion limit ({activeCycle.max_suggestions_per_user}). Consider removing some suggestions.
+                                ⚠️ You have exceeded the suggestion limit ({activePhase.max_suggestions_per_user}). Consider removing some suggestions.
                             </p>
                         )}
-                        {currentUser?.role === 'member' && isAtLimit() && activeCycle.type === 'suggestion' && phase === 'suggestion' && (
+                        {currentUser?.role === 'member' && isAtLimit() && activePhase.type === 'suggestion' && (
                             <p className="text-sm text-foreground/60 mt-2">
-                                You have reached the maximum of {activeCycle.max_suggestions_per_user} suggestion(s) for this cycle.
+                                You have reached the maximum of {activePhase.max_suggestions_per_user} suggestion(s) for this phase.
                             </p>
                         )}
                     </div>
@@ -376,7 +373,7 @@ export default function SuggestionsPage() {
                                 {currentUser?.role === 'admin' && hasExceededLimit() && (
                                     <div className="mb-4 p-3 bg-yellow-400/10 border border-yellow-400/30 rounded-lg">
                                         <p className="text-yellow-400 text-sm">
-                                            ⚠️ You are about to exceed the suggestion limit of {activeCycle?.max_suggestions_per_user}.
+                                            ⚠️ You are about to exceed the suggestion limit of {activePhase?.max_suggestions_per_user}.
                                             As an admin, you can still add this suggestion.
                                         </p>
                                     </div>

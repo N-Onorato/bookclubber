@@ -50,12 +50,22 @@ export interface Book {
 
 export interface Cycle {
     id: string;
+    name?: string;
+    theme?: string;
+    winner_book_id?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface Phase {
+    id: string;
+    cycle_id: string;
     type: 'suggestion' | 'voting';
     theme?: string;
     starts_at: string;
     ends_at: string;
     is_active: boolean;
-    winner_book_id?: string;
+    winner_book_id?: string; // Deprecated: use cycle.winner_book_id instead
     max_suggestions_per_user: number;
     max_votes_per_user: number;
     created_at: string;
@@ -63,7 +73,7 @@ export interface Cycle {
 
 export interface Suggestion {
     id: string;
-    cycle_id: string;
+    phase_id: string;
     user_id: string;
     book_id: string;
     created_at: string;
@@ -71,7 +81,7 @@ export interface Suggestion {
 
 export interface Vote {
     id: string;
-    cycle_id: string;
+    phase_id: string;
     user_id: string;
     book_id: string;
     created_at: string;
@@ -150,13 +160,21 @@ export interface Event {
 
 export interface BookWithDetails extends Book {
     suggested_by?: User;
-    suggestion_cycle?: Cycle;
+    suggestion_phase?: Phase;
+}
+
+export interface CycleWithPhases extends Cycle {
+    phases?: Phase[];
+}
+
+export interface PhaseWithCycle extends Phase {
+    cycle?: Cycle;
 }
 
 export interface SuggestionWithDetails extends Suggestion {
     book?: Book;
     user?: User;
-    cycle?: Cycle;
+    phase?: Phase;
     // Denormalized fields for UI display
     title?: string;
     author?: string;
@@ -169,7 +187,7 @@ export interface SuggestionWithDetails extends Suggestion {
 export interface VoteWithDetails extends Vote {
     book?: Book;
     user?: User;
-    cycle?: Cycle;
+    phase?: Phase;
 }
 
 export interface ReadingChunkWithDetails extends ReadingChunk {
@@ -236,6 +254,12 @@ export interface CreateBookRequest {
 }
 
 export interface CreateCycleRequest {
+    name?: string;
+    theme?: string;
+}
+
+export interface CreatePhaseRequest {
+    cycle_id: string;
     type: 'suggestion' | 'voting';
     theme?: string;
     starts_at: string;
@@ -245,12 +269,12 @@ export interface CreateCycleRequest {
 }
 
 export interface CreateSuggestionRequest {
-    cycle_id: string;
+    phase_id: string;
     book_id: string;
 }
 
 export interface CastVoteRequest {
-    cycle_id: string;
+    phase_id: string;
     book_id: string;
 }
 
@@ -277,5 +301,5 @@ export interface CreateMeetingRequest {
 
 export type UserRole = User['role'];
 export type BookStatus = Book['status'];
-export type CycleType = Cycle['type'];
+export type PhaseType = Phase['type'];
 export type RankingTier = Ranking['tier'];

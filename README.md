@@ -30,12 +30,12 @@ requirements and roadmap.
 #### 🚧 In Development
 
 - **Book Suggestion System**
-  - [ ] Max 3 suggestions per person per cycle
+  - [x] Max 3 suggestions per person per cycle
   - [x] Open Library API integration for metadata
   - [ ] Series detection and warnings
   - [ ] Author blocklist validation
   - [ ] Release date validation
-  - [ ] Optional theme mode
+  - [x] Optional theme mode
 
 - **Voting Module**
   - [ ] 3 votes per member allocation
@@ -143,9 +143,9 @@ requirements and roadmap.
    values:
    ```yaml
    environment:
-      - NODE_ENV=production
-      - SESSION_SECRET=your-secure-session-secret-here
-      - DATABASE_PATH=/app/data/bookclub.db
+     - NODE_ENV=production
+     - SESSION_SECRET=your-secure-session-secret-here
+     - DATABASE_PATH=/app/data/bookclub.db
    ```
 
 ## 📁 Project Structure

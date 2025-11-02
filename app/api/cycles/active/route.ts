@@ -1,26 +1,30 @@
 import { NextResponse } from 'next/server';
-import { CycleService } from '@/lib/services/cycleService';
+import { PhaseService } from '@/lib/services/phaseService';
+import { CycleService } from '@/lib/services/cycleServiceNew';
 import { requireAuth } from '@/lib/auth';
 
 /**
- * GET /api/cycles/active - Get the currently active cycle
+ * GET /api/cycles/active - Get the currently active phase and its cycle
  */
 export async function GET() {
     try {
         await requireAuth();
 
-        const result = await CycleService.getActiveCycle();
+        const phase = await PhaseService.getActivePhase();
 
-        if (!result) {
+        if (!phase) {
             return NextResponse.json(
-                { error: 'No active cycle found' },
+                { error: 'No active phase found' },
                 { status: 404 }
             );
         }
 
+        // Get the parent cycle
+        const cycle = await CycleService.getCycleById(phase.cycle_id);
+
         return NextResponse.json({
-            cycle: result.cycle,
-            phase: result.phase
+            phase,
+            cycle
         });
     } catch (error: any) {
         if (error.message === 'Authentication required') {
@@ -30,7 +34,7 @@ export async function GET() {
             );
         }
 
-        console.error('Error fetching active cycle:', error);
+        console.error('Error fetching active phase:', error);
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
