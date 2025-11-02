@@ -40,8 +40,14 @@ export async function authMiddleware(request: NextRequest) {
   if (sessionToken) {
     try {
       // Make internal API call to validate session
-      const baseUrl = request.nextUrl.origin;
-      const response = await fetch(`${baseUrl}/api/auth/me`, {
+      // Use localhost for internal calls to avoid SSL issues with Railway proxy
+      // Railway uses PORT env var (default 8080), local dev uses 3000
+      const port = process.env.PORT || '3000';
+      const apiUrl = process.env.NODE_ENV === 'production'
+        ? `http://localhost:${port}/api/auth/me`
+        : `${request.nextUrl.origin}/api/auth/me`;
+
+      const response = await fetch(apiUrl, {
         headers: {
           Cookie: `session_id=${sessionToken}`,
         },
