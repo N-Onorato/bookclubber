@@ -1,5 +1,7 @@
 import Database from "better-sqlite3";
 import NodeCache from "node-cache";
+import { existsSync, mkdirSync } from "fs";
+import { dirname } from "path";
 
 let db: Database.Database | null = null;
 const cache = new NodeCache({ stdTTL: 3600 }); // 1 hour cache
@@ -7,6 +9,13 @@ const cache = new NodeCache({ stdTTL: 3600 }); // 1 hour cache
 export function getDatabase(): Database.Database {
     if (!db) {
         const dbPath = process.env.DATABASE_PATH || "./data/bookclub.db";
+
+        // Ensure the directory exists before creating the database
+        const dbDir = dirname(dbPath);
+        if (!existsSync(dbDir)) {
+            mkdirSync(dbDir, { recursive: true });
+        }
+
         db = new Database(dbPath);
         db.pragma("journal_mode = WAL");
         db.pragma("foreign_keys = ON");

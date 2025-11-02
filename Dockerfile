@@ -9,23 +9,29 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Create data directory with proper permissions for Railway volume
-# Railway mounts volume at /app/data - this ensures subdirectories exist
-RUN mkdir -p /app/data/covers && chmod -R 755 /app/data
-
-# Build Next.js application
+# Build Next.js application (don't access /app/data during build - volume not mounted yet)
 RUN npm run build
 
 # Remove dev dependencies to reduce image size
-RUN npm ci --only=production && npm cache clean --force
+# Keep tsx and cross-env for migrations at runtime
+RUN npm prune --production && \
+    npm install --no-save tsx cross-env @cytoplum/numtwo && \
+    npm cache clean --force
+
+# Copy startup script
+COPY scripts/start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
-RUN chown -R nextjs:nodejs /app/data /app/.next
+
+# Note: Don't chown /app/data here - it's a volume mount point
+# Railway will mount the volume at runtime with proper permissions
+RUN chown -R nextjs:nodejs /app/.next /app/start.sh
+
 USER nextjs
 
 EXPOSE 3000
 
-# Note: Database initialization happens on first run via Railway volume
-# Migrations run automatically when database doesn't exist
-CMD ["npm", "start"]
+# Use startup script that handles database initialization at runtime
+CMD ["/app/start.sh"]
