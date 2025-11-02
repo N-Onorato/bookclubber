@@ -2,29 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-
-interface Cycle {
-    id: string;
-    type: 'suggestion' | 'voting';
-    theme?: string;
-    starts_at: string;
-    ends_at: string;
-    is_active: boolean;
-    max_suggestions_per_user: number;
-    max_votes_per_user: number;
-}
-
-interface Suggestion {
-    id: string;
-    book_id: string;
-    title: string;
-    author: string;
-    cover_image_url?: string;
-    description?: string;
-    reason?: string;
-    suggested_by: string;
-    user_id: string;
-}
+import SuggestionCard from './SuggestionCard';
+import { Cycle, SuggestionWithDetails } from '@/lib/types';
 
 interface SearchResult {
     openLibraryId: string;
@@ -39,7 +18,7 @@ interface SearchResult {
 export default function SuggestionsPage() {
     const [activeCycle, setActiveCycle] = useState<Cycle | null>(null);
     const [phase, setPhase] = useState<string>('');
-    const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+    const [suggestions, setSuggestions] = useState<SuggestionWithDetails[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [showSearchModal, setShowSearchModal] = useState(false);
@@ -188,7 +167,7 @@ export default function SuggestionsPage() {
 
     const hasExceededLimit = () => {
         if (!activeCycle || !currentUser) return false;
-        return getUserSuggestionCount() >= activeCycle.max_suggestions_per_user;
+        return getUserSuggestionCount() > activeCycle.max_suggestions_per_user;
     };
 
     const isAtLimit = () => {
@@ -196,7 +175,7 @@ export default function SuggestionsPage() {
         return getUserSuggestionCount() >= activeCycle.max_suggestions_per_user;
     };
 
-    const canDelete = (suggestion: Suggestion) => {
+    const canDelete = (suggestion: SuggestionWithDetails) => {
         if (!currentUser) return false;
         // User can delete their own suggestions, or admins can delete any
         return suggestion.user_id === currentUser.id || currentUser.role === 'admin';
@@ -299,61 +278,12 @@ export default function SuggestionsPage() {
                 ) : (
                     <div className="space-y-6">
                         {suggestions.map((suggestion) => (
-                            <div
+                            <SuggestionCard
                                 key={suggestion.id}
-                                className="p-6 bg-[#18181B]/60 backdrop-blur-lg rounded-2xl border border-[#27272A] hover:border-accent transition-all"
-                            >
-                                <div className="flex gap-6">
-                                    {/* Book Cover - Left Side */}
-                                    {suggestion.cover_image_url && (
-                                        <div className="flex-shrink-0">
-                                            <img
-                                                src={suggestion.cover_image_url}
-                                                alt={suggestion.title}
-                                                className="w-48 h-auto object-cover rounded-lg shadow-lg"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Book Details - Right Side */}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start mb-3">
-                                            <div className="flex-1">
-                                                <h3 className="text-2xl font-serif font-semibold text-foreground mb-2">
-                                                    {suggestion.title}
-                                                </h3>
-                                                <p className="text-foreground/70 text-lg mb-3">by {suggestion.author}</p>
-                                            </div>
-                                            {canDelete(suggestion) && (
-                                                <button
-                                                    onClick={() => handleDeleteSuggestion(suggestion.id)}
-                                                    className="ml-4 px-3 py-1 text-sm bg-red-500/10 border border-red-500/30 rounded-full text-red-400 hover:bg-red-500/20 transition-colors"
-                                                    title="Delete suggestion"
-                                                >
-                                                    Delete
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {suggestion.description && (
-                                            <p className="text-foreground/60 text-sm mb-4 leading-relaxed">
-                                                {suggestion.description}
-                                            </p>
-                                        )}
-
-                                        {suggestion.reason && (
-                                            <div className="mt-4 p-4 bg-[#18181B]/40 border border-[#27272A] rounded-lg">
-                                                <p className="text-foreground/50 text-xs mb-2 uppercase tracking-wider">Why this book?</p>
-                                                <p className="text-foreground/70 text-sm italic">"{suggestion.reason}"</p>
-                                            </div>
-                                        )}
-
-                                        <p className="text-foreground/40 text-xs mt-4">
-                                            Suggested by {suggestion.suggested_by}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
+                                suggestion={suggestion}
+                                canDelete={canDelete(suggestion)}
+                                onDelete={handleDeleteSuggestion}
+                            />
                         ))}
                     </div>
                 )}
@@ -362,7 +292,7 @@ export default function SuggestionsPage() {
             {/* Search Modal */}
             {showSearchModal && (
                 <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="max-w-2xl w-full bg-[#18181B] rounded-2xl border border-[#27272A] p-6 max-h-[90vh] overflow-y-auto">
+                    <div className="max-w-2xl w-full bg-[#18181B] rounded-m border border-[#27272A] p-6 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-2xl font-serif font-semibold text-foreground">
                                 {selectedBook ? 'Confirm Suggestion' : 'Search for a Book'}

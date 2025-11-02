@@ -157,6 +157,13 @@ export interface SuggestionWithDetails extends Suggestion {
     book?: Book;
     user?: User;
     cycle?: Cycle;
+    // Denormalized fields for UI display
+    title?: string;
+    author?: string;
+    cover_image_url?: string;
+    description?: string;
+    reason?: string;
+    suggested_by?: string;
 }
 
 export interface VoteWithDetails extends Vote {
