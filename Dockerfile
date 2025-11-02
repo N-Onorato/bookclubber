@@ -24,12 +24,10 @@ RUN chmod +x /app/start.sh
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
-
-# Note: Don't chown /app/data here - it's a volume mount point
-# Railway will mount the volume at runtime with proper permissions
 RUN chown -R nextjs:nodejs /app/.next /app/start.sh
 
-USER nextjs
+# Don't switch to nextjs user yet - Railway needs to mount volume first
+# The startup script will handle directory creation with proper permissions
 
 EXPOSE 3000
 
