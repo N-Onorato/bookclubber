@@ -9,11 +9,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Create data directory with proper permissions
-RUN mkdir -p /app/data && chmod 755 /app/data
-
-# Initialize database (runs migrations + seeds admin user)
-RUN npm run db:init
+# Create data directory with proper permissions for Railway volume
+# Railway mounts volume at /app/data - this ensures subdirectories exist
+RUN mkdir -p /app/data/covers && chmod -R 755 /app/data
 
 # Build Next.js application
 RUN npm run build
@@ -28,4 +26,6 @@ USER nextjs
 
 EXPOSE 3000
 
+# Note: Database initialization happens on first run via Railway volume
+# Migrations run automatically when database doesn't exist
 CMD ["npm", "start"]

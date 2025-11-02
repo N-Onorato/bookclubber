@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { getDatabase } from '../db/connection';
 import { Book } from '../types';
+import { ImageService } from './imageService';
 
 // Open Library API configuration
 const OPEN_LIBRARY_API = 'https://openlibrary.org';
@@ -131,12 +132,20 @@ export class BookService {
 
         const now = new Date().toISOString();
 
+        // Download cover image locally if URL provided
+        let localCoverPath: string | null = null;
+        if (bookData.coverImageUrl) {
+            const bookId = existingBook?.id || randomUUID();
+            localCoverPath = await ImageService.downloadAndSaveImage(bookData.coverImageUrl, bookId);
+        }
+
         if (existingBook) {
             // Update existing book
             db.prepare(`
                 UPDATE books
                 SET title = ?, author = ?, isbn = ?, publication_date = ?,
-                    page_count = ?, cover_url = ?, description = ?, updated_at = ?
+                    page_count = ?, cover_url = ?, description = ?, updated_at = ?,
+                    local_cover_path = ?, original_cover_url = ?
                 WHERE id = ?
             `).run(
                 bookData.title,
@@ -147,6 +156,8 @@ export class BookService {
                 bookData.coverImageUrl || null,
                 bookData.description || null,
                 now,
+                localCoverPath,
+                bookData.coverImageUrl || null,
                 existingBook.id
             );
 
@@ -158,9 +169,10 @@ export class BookService {
             db.prepare(`
                 INSERT INTO books (
                     id, source, source_id, title, author, isbn, publication_date,
-                    page_count, cover_url, description, status, created_at, updated_at
+                    page_count, cover_url, description, status, created_at, updated_at,
+                    local_cover_path, original_cover_url
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'suggested', ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'suggested', ?, ?, ?, ?)
             `).run(
                 bookId,
                 bookData.source,
@@ -173,7 +185,9 @@ export class BookService {
                 bookData.coverImageUrl || null,
                 bookData.description || null,
                 now,
-                now
+                now,
+                localCoverPath,
+                bookData.coverImageUrl || null
             );
 
             return db.prepare('SELECT * FROM books WHERE id = ?').get(bookId) as Book;

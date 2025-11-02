@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     try {
         await requireAuth();
 
-        const { openLibraryId } = await request.json();
+        const { openLibraryId, coverImageUrl } = await request.json();
 
         if (!openLibraryId) {
             return NextResponse.json(
@@ -65,12 +65,13 @@ export async function POST(request: NextRequest) {
         }
 
         // Create book in database with source tracking
+        // Use cover URL from search results if available, otherwise use the one from work data
         const book = await BookService.createOrUpdateBook({
             source: 'openlibrary',
             sourceId: bookData.openLibraryId,
             title: bookData.title,
             author: bookData.author,
-            coverImageUrl: bookData.coverImageUrl,
+            coverImageUrl: coverImageUrl || bookData.coverImageUrl,
             description: bookData.description,
             publishYear: bookData.publishYear
         });

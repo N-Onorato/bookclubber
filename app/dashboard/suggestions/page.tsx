@@ -128,7 +128,8 @@ export default function SuggestionsPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    openLibraryId: selectedBook.openLibraryId
+                    openLibraryId: selectedBook.openLibraryId,
+                    coverImageUrl: selectedBook.coverImageUrl
                 })
             });
 

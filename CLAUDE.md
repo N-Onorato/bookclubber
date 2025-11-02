@@ -10,6 +10,29 @@ important patterns/gotchas, automatically update this CLAUDE.md file with:
 5. **Important**: This file takes up context space. Limit it to 350 lines and
    compact as needed.
 
+### Local Image Storage System (NEW - 2025-11-01)
+
+Implemented provider-agnostic local image storage to be a good API citizen and support
+future custom uploads/edits.
+
+#### Architecture:
+- **Storage**: `/app/data/covers/` (Railway volume persisted)
+- **Database**: `local_cover_path` (relative path) + `original_cover_url` (reference)
+- **Serving**: Custom API route `/api/covers/[filename]`
+- **Download**: Automatic on book creation from external sources
+
+#### Key Files:
+- `lib/services/imageService.ts` - Download, save, serve, delete images
+- `app/api/covers/[filename]/route.ts` - Serve images with proper caching
+- Migration v3 - Added `local_cover_path` and `original_cover_url` columns
+
+#### Important Notes:
+- Images downloaded ONCE from Open Library, served locally thereafter
+- Supports multiple providers (Open Library, Goodreads, custom uploads)
+- Railway deployment uses `/app/data` volume for persistence
+- Local dev uses `./data` directory (configure via `DATA_DIR` env var)
+- Fallback to external URL if local download fails
+
 #### Database Workflow:
 
 **For Production:**

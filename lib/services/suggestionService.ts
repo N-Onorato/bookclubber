@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { getDatabase } from '../db/connection';
 import { Suggestion } from '../types';
+import { ImageService } from './imageService';
 
 export class SuggestionService {
     /**
@@ -128,7 +129,7 @@ export class SuggestionService {
      */
     static async getSuggestionsWithDetails(cycleId: string): Promise<any[]> {
         const db = getDatabase();
-        return db.prepare(`
+        const suggestions = db.prepare(`
             SELECT
                 s.id,
                 s.cycle_id,
@@ -139,7 +140,9 @@ export class SuggestionService {
                 s.updated_at,
                 b.title,
                 b.author,
-                b.cover_url as cover_image_url,
+                b.local_cover_path,
+                b.original_cover_url,
+                b.cover_url,
                 b.description,
                 b.page_count,
                 u.name as suggested_by
@@ -149,6 +152,14 @@ export class SuggestionService {
             WHERE s.cycle_id = ?
             ORDER BY s.created_at ASC
         `).all(cycleId) as any[];
+
+        // Transform to include proper cover_image_url
+        return suggestions.map(suggestion => ({
+            ...suggestion,
+            cover_image_url: suggestion.local_cover_path
+                ? ImageService.getImageUrl(suggestion.local_cover_path)
+                : (suggestion.original_cover_url || suggestion.cover_url)
+        }));
     }
 
     /**

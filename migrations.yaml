@@ -277,3 +277,19 @@ migrations:
 
       CREATE INDEX idx_cycles_active ON cycles(is_active);
       CREATE INDEX idx_cycles_type ON cycles(type);
+  - version: 3
+    name: "Add local image storage support"
+    description: "Add columns for local cover image paths and original URLs to support provider-agnostic image storage"
+    reversible: true
+    up: |
+      -- Add new columns for local image storage
+      ALTER TABLE books ADD COLUMN local_cover_path TEXT;
+      ALTER TABLE books ADD COLUMN original_cover_url TEXT;
+
+      -- Migrate existing cover_url values to original_cover_url
+      UPDATE books SET original_cover_url = cover_url WHERE cover_url IS NOT NULL;
+    down: |
+      -- SQLite doesn't support DROP COLUMN directly
+      -- If we need to rollback, we would recreate the table without these columns
+      -- For now, setting them to NULL is sufficient for a down migration
+      UPDATE books SET local_cover_path = NULL, original_cover_url = NULL;
