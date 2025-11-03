@@ -46,9 +46,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (type !== 'suggestion' && type !== 'voting') {
+        if (type !== 'suggestion' && type !== 'voting' && type !== 'reading') {
             return NextResponse.json(
-                { error: 'Type must be either "suggestion" or "voting"' },
+                { error: 'Type must be either "suggestion", "voting", or "reading"' },
                 { status: 400 }
             );
         }
@@ -62,11 +62,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Validate dates
+        // Validate dates (skip for reading phases as they have no inherent time information)
         const start = new Date(startsAt);
         const end = new Date(endsAt);
 
-        if (end <= start) {
+        if (type !== 'reading' && end <= start) {
             return NextResponse.json(
                 { error: 'End date must be after start date' },
                 { status: 400 }

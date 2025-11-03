@@ -1,14 +1,14 @@
 import { randomUUID } from 'crypto';
 import { getDatabase } from '../db/connection';
-import { Phase } from '../types';
+import { Phase, PhaseType } from '../types';
 
 export class PhaseService {
     /**
-     * Create a new phase (suggestion or voting)
+     * Create a new phase (suggestion, voting, or reading)
      */
     static async createPhase(
         cycleId: string,
-        type: 'suggestion' | 'voting',
+        type: PhaseType,
         startsAt: Date,
         endsAt: Date,
         theme?: string,
@@ -109,6 +109,7 @@ export class PhaseService {
 
     /**
      * Get any active phase
+     * Priority: suggestion > voting > reading
      */
     static async getActivePhase(): Promise<Phase | null> {
         // First check for suggestion phase
@@ -121,6 +122,12 @@ export class PhaseService {
         const votingPhase = await this.getActiveVotingPhase();
         if (votingPhase) {
             return votingPhase;
+        }
+
+        // Finally check for reading phase
+        const readingPhase = await this.getActiveReadingPhase();
+        if (readingPhase) {
+            return readingPhase;
         }
 
         return null;
@@ -164,9 +171,28 @@ export class PhaseService {
     }
 
     /**
+     * Get active reading phase (based on dates only)
+     */
+    static async getActiveReadingPhase(): Promise<Phase | null> {
+        const db = getDatabase();
+        const now = new Date().toISOString();
+
+        const phase = db.prepare(`
+            SELECT * FROM phases
+            WHERE type = 'reading'
+            AND starts_at <= ?
+            AND ends_at >= ?
+            ORDER BY starts_at DESC
+            LIMIT 1
+        `).get(now, now) as Phase | undefined;
+
+        return phase || null;
+    }
+
+    /**
      * Get phases by type
      */
-    static async getPhasesByType(type: 'suggestion' | 'voting'): Promise<Phase[]> {
+    static async getPhasesByType(type: PhaseType): Promise<Phase[]> {
         const db = getDatabase();
         return db.prepare('SELECT * FROM phases WHERE type = ? ORDER BY created_at DESC').all(type) as Phase[];
     }

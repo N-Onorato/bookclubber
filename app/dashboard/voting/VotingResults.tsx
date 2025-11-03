@@ -138,7 +138,7 @@ export default function VotingResults({ phaseId, currentUser }: VotingResultsPro
                                         <img
                                             src={getCoverUrl(book)}
                                             alt={book.title}
-                                            className="w-64 h-auto object-cover rounded-lg shadow-2xl"
+                                            className="w-64 h-auto object-cover shadow-2xl"
                                         />
                                     )}
                                     <div className="max-w-xl">
@@ -180,7 +180,7 @@ export default function VotingResults({ phaseId, currentUser }: VotingResultsPro
                                                 <img
                                                     src={getCoverUrl(book)}
                                                     alt={book.title}
-                                                    className="w-48 h-auto object-cover rounded-lg shadow-lg"
+                                                    className="w-48 h-auto object-cover shadow-lg"
                                                 />
                                             </div>
                                         )}
@@ -240,7 +240,7 @@ export default function VotingResults({ phaseId, currentUser }: VotingResultsPro
                                         <img
                                             src={getCoverUrl(book)}
                                             alt={book.title}
-                                            className="w-64 h-auto object-cover rounded-lg shadow-2xl"
+                                            className="w-64 h-auto object-cover shadow-2xl"
                                         />
                                     )}
                                     <div className="max-w-xl">

@@ -123,4 +123,60 @@ export class ImageService {
         const filename = relativePath.replace('covers/', '');
         return `/api/covers/${filename}`;
     }
+
+    /**
+     * Save an image from a buffer (e.g., uploaded file or pasted image)
+     * @param buffer - Image buffer
+     * @param bookId - Book ID for naming the file
+     * @param originalFilename - Original filename (optional, for extension detection)
+     * @returns Relative path to the saved image (e.g., "covers/abc123.jpg")
+     */
+    static async saveImageFromBuffer(buffer: Buffer, bookId: string, originalFilename?: string): Promise<string | null> {
+        try {
+            this.ensureCoversDirectory();
+
+            // Determine file extension from filename or default to jpg
+            let extension = 'jpg';
+            if (originalFilename) {
+                const ext = originalFilename.split('.').pop()?.toLowerCase();
+                if (ext && ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
+                    extension = ext === 'jpeg' ? 'jpg' : ext;
+                }
+            }
+
+            // Check buffer signature for image type if no filename
+            if (!originalFilename && buffer.length > 4) {
+                // PNG signature: 89 50 4E 47
+                if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+                    extension = 'png';
+                }
+                // JPEG signature: FF D8 FF
+                else if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+                    extension = 'jpg';
+                }
+                // WebP signature: RIFF ... WEBP
+                else if (buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') {
+                    extension = 'webp';
+                }
+                // GIF signature: GIF89a or GIF87a
+                else if (buffer.toString('ascii', 0, 3) === 'GIF') {
+                    extension = 'gif';
+                }
+            }
+
+            // Generate filename: bookId-timestamp.ext
+            const timestamp = Date.now();
+            const filename = `${bookId}-${timestamp}.${extension}`;
+            const filepath = join(ImageService.COVERS_DIR, filename);
+
+            // Save the file
+            writeFileSync(filepath, buffer);
+
+            // Return relative path for database storage
+            return `covers/${filename}`;
+        } catch (error) {
+            console.error('Error saving image from buffer:', error);
+            return null;
+        }
+    }
 }

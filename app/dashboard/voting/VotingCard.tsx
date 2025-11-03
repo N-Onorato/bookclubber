@@ -36,7 +36,7 @@ export default function VotingCard({ book, hasVoted, canVote, onVote, onUnvote }
                             <img
                                 src={coverUrl}
                                 alt={book.title}
-                                className="w-48 h-auto object-cover rounded-lg shadow-lg"
+                                className="w-48 h-auto object-cover shadow-lg"
                             />
                         </div>
                     )}

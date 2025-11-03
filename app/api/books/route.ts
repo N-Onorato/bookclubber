@@ -29,51 +29,90 @@ export async function GET() {
 }
 
 /**
- * POST /api/books - Create a book from external source (e.g., Open Library)
+ * POST /api/books - Create a book from external source OR manually
+ *
+ * Supports two modes:
+ * 1. From Open Library: { openLibraryId, coverImageUrl? }
+ * 2. Manual entry: { title, author, isbn?, description?, pageCount?, publishYear?, coverImageUrl? }
  */
 export async function POST(request: NextRequest) {
     try {
         await requireAuth();
 
-        const { openLibraryId, coverImageUrl } = await request.json();
+        const body = await request.json();
+        const { openLibraryId, title, author, isbn, description, pageCount, publishYear, coverImageUrl, coverImagePath } = body;
 
-        if (!openLibraryId) {
+        // Mode 1: Create from Open Library
+        if (openLibraryId) {
+            // Check if book already exists
+            const existingBook = await BookService.getBookBySource('openlibrary', openLibraryId);
+            if (existingBook) {
+                return NextResponse.json({
+                    success: true,
+                    book: existingBook,
+                    message: 'Book already exists'
+                });
+            }
+
+            // Fetch book details from Open Library
+            const bookData = await BookService.getBookFromOpenLibrary(openLibraryId);
+
+            if (!bookData) {
+                return NextResponse.json(
+                    { error: 'Failed to fetch book from Open Library' },
+                    { status: 404 }
+                );
+            }
+
+            // Create book in database with source tracking
+            // Use cover URL from search results if available, otherwise use the one from work data
+            const book = await BookService.createOrUpdateBook({
+                source: 'openlibrary',
+                sourceId: bookData.openLibraryId,
+                title: bookData.title,
+                author: bookData.author,
+                coverImageUrl: coverImageUrl || bookData.coverImageUrl,
+                description: bookData.description,
+                publishYear: bookData.publishYear
+            });
+
+            return NextResponse.json({
+                success: true,
+                book
+            }, { status: 201 });
+        }
+
+        // Mode 2: Manual entry
+        if (!title || !author) {
             return NextResponse.json(
-                { error: 'Open Library ID is required' },
+                { error: 'Title and author are required for manual entry' },
                 { status: 400 }
             );
         }
 
-        // Check if book already exists
-        const existingBook = await BookService.getBookBySource('openlibrary', openLibraryId);
+        // Check if book with same title/author already exists
+        const existingBook = await BookService.getBookByTitleAuthor(title, author);
         if (existingBook) {
             return NextResponse.json({
                 success: true,
                 book: existingBook,
-                message: 'Book already exists'
+                message: 'Book with same title and author already exists'
             });
         }
 
-        // Fetch book details from Open Library
-        const bookData = await BookService.getBookFromOpenLibrary(openLibraryId);
-
-        if (!bookData) {
-            return NextResponse.json(
-                { error: 'Failed to fetch book from Open Library' },
-                { status: 404 }
-            );
-        }
-
-        // Create book in database with source tracking
-        // Use cover URL from search results if available, otherwise use the one from work data
-        const book = await BookService.createOrUpdateBook({
-            source: 'openlibrary',
-            sourceId: bookData.openLibraryId,
-            title: bookData.title,
-            author: bookData.author,
-            coverImageUrl: coverImageUrl || bookData.coverImageUrl,
-            description: bookData.description,
-            publishYear: bookData.publishYear
+        // Create manually entered book
+        // Use timestamp as sourceId for manual entries to ensure uniqueness
+        const book = await BookService.createOrUpdateBookManual({
+            source: 'manual',
+            sourceId: `manual-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+            title,
+            author,
+            isbn,
+            description,
+            pageCount,
+            publishYear,
+            coverImageUrl,
+            coverImagePath
         });
 
         return NextResponse.json({

@@ -5,9 +5,11 @@ interface SuggestionCardProps {
     suggestion: SuggestionWithDetails;
     canDelete: boolean;
     onDelete: (id: string) => void;
+    canEdit?: boolean;
+    onEdit?: (suggestion: SuggestionWithDetails) => void;
 }
 
-export default function SuggestionCard({ suggestion, canDelete, onDelete }: SuggestionCardProps) {
+export default function SuggestionCard({ suggestion, canDelete, onDelete, canEdit, onEdit }: SuggestionCardProps) {
     return (
         <BacklitCard glowColor="amber" intensity="subtle">
             <div className="p-6 bg-[#18181B]/60 backdrop-blur-lg rounded-2xl border border-[#27272A] hover:border-accent transition-all">
@@ -18,7 +20,7 @@ export default function SuggestionCard({ suggestion, canDelete, onDelete }: Sugg
                         <img
                             src={suggestion.cover_image_url}
                             alt={suggestion.title}
-                            className="w-48 h-auto object-cover rounded-lg shadow-lg"
+                            className="w-48 h-auto object-cover shadow-lg"
                         />
                     </div>
                 )}
@@ -32,15 +34,26 @@ export default function SuggestionCard({ suggestion, canDelete, onDelete }: Sugg
                             </h3>
                             <p className="text-foreground/70 text-lg mb-3">by {suggestion.author || 'Unknown Author'}</p>
                         </div>
-                        {canDelete && (
-                            <button
-                                onClick={() => onDelete(suggestion.id)}
-                                className="ml-4 px-3 py-1 text-sm bg-red-500/10 border border-red-500/30 rounded-full text-red-400 hover:bg-red-500/20 transition-colors"
-                                title="Delete suggestion"
-                            >
-                                Delete
-                            </button>
-                        )}
+                        <div className="flex gap-2">
+                            {canEdit && onEdit && (
+                                <button
+                                    onClick={() => onEdit(suggestion)}
+                                    className="px-3 py-1 text-sm bg-blue-500/10 border border-blue-500/30 rounded-full text-blue-400 hover:bg-blue-500/20 transition-colors"
+                                    title="Edit book details"
+                                >
+                                    Edit
+                                </button>
+                            )}
+                            {canDelete && (
+                                <button
+                                    onClick={() => onDelete(suggestion.id)}
+                                    className="px-3 py-1 text-sm bg-red-500/10 border border-red-500/30 rounded-full text-red-400 hover:bg-red-500/20 transition-colors"
+                                    title="Delete suggestion"
+                                >
+                                    Delete
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {suggestion.description && (

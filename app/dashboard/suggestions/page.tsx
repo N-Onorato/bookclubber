@@ -3,39 +3,29 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import SuggestionCard from './SuggestionCard';
-import { Phase, SuggestionWithDetails } from '@/lib/types';
-
-interface SearchResult {
-    openLibraryId: string;
-    title: string;
-    author: string;
-    coverImageUrl?: string;
-    description?: string;
-    publishYear?: number;
-    pageCount?: number;
-}
+import BookSearchModal from './BookSearchModal';
+import EditBookModal from './EditBookModal';
+import { SuggestionWithDetails } from '@/lib/types';
 
 export default function SuggestionsPage() {
-    const [activePhase, setActivePhase] = useState<Phase | null>(null);
+    const [cycleContext, setCycleContext] = useState<any>(null);
     const [suggestions, setSuggestions] = useState<SuggestionWithDetails[]>([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [showSearchModal, setShowSearchModal] = useState(false);
-    const [selectedBook, setSelectedBook] = useState<SearchResult | null>(null);
-    const [suggestionReason, setSuggestionReason] = useState('');
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingSuggestion, setEditingSuggestion] = useState<SuggestionWithDetails | null>(null);
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState<any>(null);
 
     useEffect(() => {
-        loadActivePhase();
+        loadActiveCycle();
         loadCurrentUser();
     }, []);
 
     useEffect(() => {
-        if (activePhase) {
+        if (cycleContext?.suggestionPhase) {
             loadSuggestions();
         }
-    }, [activePhase]);
+    }, [cycleContext]);
 
     const loadCurrentUser = async () => {
         try {
@@ -49,25 +39,25 @@ export default function SuggestionsPage() {
         }
     };
 
-    const loadActivePhase = async () => {
+    const loadActiveCycle = async () => {
         try {
             const response = await fetch('/api/cycles/active');
             if (response.ok) {
                 const data = await response.json();
-                setActivePhase(data.phase);
+                setCycleContext(data);
             }
         } catch (error) {
-            console.error('Error loading active phase:', error);
+            console.error('Error loading active cycle:', error);
         } finally {
             setLoading(false);
         }
     };
 
     const loadSuggestions = async () => {
-        if (!activePhase) return;
+        if (!cycleContext?.suggestionPhase) return;
 
         try {
-            const response = await fetch(`/api/suggestions?phaseId=${activePhase.id}`);
+            const response = await fetch(`/api/suggestions?phaseId=${cycleContext.suggestionPhase.id}`);
             if (response.ok) {
                 const data = await response.json();
                 setSuggestions(data.suggestions);
@@ -77,100 +67,31 @@ export default function SuggestionsPage() {
         }
     };
 
-    const handleSearch = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!searchQuery.trim()) return;
-
-        try {
-            const response = await fetch(`/api/books/search?q=${encodeURIComponent(searchQuery)}`);
-            if (response.ok) {
-                const data = await response.json();
-                setSearchResults(data.books);
-            }
-        } catch (error) {
-            console.error('Error searching books:', error);
-        }
-    };
-
-    const handleSelectBook = (book: SearchResult) => {
-        setSelectedBook(book);
-        setSearchResults([]);
-        setSearchQuery('');
-    };
-
-    const handleSubmitSuggestion = async () => {
-        if (!selectedBook || !activePhase) return;
-
-        try {
-            // First, create the book in our database
-            const bookResponse = await fetch('/api/books', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    openLibraryId: selectedBook.openLibraryId,
-                    coverImageUrl: selectedBook.coverImageUrl
-                })
-            });
-
-            if (!bookResponse.ok) {
-                const data = await bookResponse.json();
-                alert(`Error: ${data.error}`);
-                return;
-            }
-
-            const bookData = await bookResponse.json();
-
-            // Then create the suggestion
-            const suggestionResponse = await fetch('/api/suggestions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    phaseId: activePhase.id,
-                    bookId: bookData.book.id,
-                    reason: suggestionReason
-                })
-            });
-
-            if (suggestionResponse.ok) {
-                setShowSearchModal(false);
-                setSelectedBook(null);
-                setSuggestionReason('');
-                loadSuggestions();
-            } else {
-                const data = await suggestionResponse.json();
-                alert(`Error: ${data.error}`);
-            }
-        } catch (error) {
-            console.error('Error submitting suggestion:', error);
-            alert('Failed to submit suggestion');
-        }
-    };
-
     const getUserSuggestionCount = () => {
         if (!currentUser) return 0;
         return suggestions.filter(s => s.user_id === currentUser.id).length;
     };
 
     const canSuggest = () => {
-        if (!activePhase || !currentUser) return false;
-        // Can suggest if it's a suggestion phase
-        if (activePhase.type !== 'suggestion') return false;
+        if (!cycleContext?.suggestionPhase || !currentUser) return false;
+        // Can suggest only if suggestion phase is open
+        if (!cycleContext.isSuggestionOpen) return false;
 
         // Members are limited, admins can always suggest (with warning)
         if (currentUser.role === 'admin') return true;
 
         // Check if member has reached the limit
-        return getUserSuggestionCount() < activePhase.max_suggestions_per_user;
+        return getUserSuggestionCount() < cycleContext.suggestionPhase.max_suggestions_per_user;
     };
 
     const hasExceededLimit = () => {
-        if (!activePhase || !currentUser) return false;
-        return getUserSuggestionCount() > activePhase.max_suggestions_per_user;
+        if (!cycleContext?.suggestionPhase || !currentUser) return false;
+        return getUserSuggestionCount() > cycleContext.suggestionPhase.max_suggestions_per_user;
     };
 
     const isAtLimit = () => {
-        if (!activePhase || !currentUser) return false;
-        return getUserSuggestionCount() >= activePhase.max_suggestions_per_user;
+        if (!cycleContext?.suggestionPhase || !currentUser) return false;
+        return getUserSuggestionCount() >= cycleContext.suggestionPhase.max_suggestions_per_user;
     };
 
     const canDelete = (suggestion: SuggestionWithDetails) => {
@@ -201,6 +122,17 @@ export default function SuggestionsPage() {
         }
     };
 
+    const handleEditSuggestion = (suggestion: SuggestionWithDetails) => {
+        setEditingSuggestion(suggestion);
+        setShowEditModal(true);
+    };
+
+    const handleEditSuccess = () => {
+        loadSuggestions();
+        setShowEditModal(false);
+        setEditingSuggestion(null);
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -209,7 +141,7 @@ export default function SuggestionsPage() {
         );
     }
 
-    if (!activePhase) {
+    if (!cycleContext) {
         return (
             <div className="min-h-screen p-8">
                 <div className="max-w-6xl mx-auto">
@@ -217,8 +149,8 @@ export default function SuggestionsPage() {
                         ← Back to Dashboard
                     </Link>
                     <div className="p-8 bg-[#18181B]/60 backdrop-blur-lg rounded-2xl border border-[#27272A] text-center">
-                        <h2 className="text-2xl font-serif text-foreground mb-2">No Active Phase</h2>
-                        <p className="text-foreground/60">There is no active phase at the moment.</p>
+                        <h2 className="text-2xl font-serif text-foreground mb-2">No Active Cycle</h2>
+                        <p className="text-foreground/60">There is no active cycle at the moment.</p>
                     </div>
                 </div>
             </div>
@@ -238,20 +170,52 @@ export default function SuggestionsPage() {
                             Book Suggestions
                         </h1>
                         <p className="text-foreground/60">
-                            {activePhase.type === 'suggestion' ? '📚 Suggestion Phase' : '🗳️ Voting Phase'}
-                            {activePhase.theme && ` - ${activePhase.theme}`}
+                            {cycleContext.isSuggestionOpen && '📚 Suggestion Phase Open'}
+                            {!cycleContext.isSuggestionOpen && cycleContext.suggestionPhase && (() => {
+                                const now = new Date();
+                                const starts = new Date(cycleContext.suggestionPhase.starts_at);
+                                if (starts > now) {
+                                    // Future phase
+                                    const days = Math.floor((starts.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                                    const hours = Math.floor((starts.getTime() - now.getTime()) / (1000 * 60 * 60));
+                                    if (days > 0) {
+                                        return `📚 Suggestions open in ${days} day${days !== 1 ? 's' : ''}`;
+                                    } else if (hours > 0) {
+                                        return `📚 Suggestions open in ${hours} hour${hours !== 1 ? 's' : ''}`;
+                                    } else {
+                                        const minutes = Math.floor((starts.getTime() - now.getTime()) / (1000 * 60));
+                                        return `📚 Suggestions open in ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+                                    }
+                                } else {
+                                    // Past phase
+                                    return '📚 Suggestions Closed';
+                                }
+                            })()}
+                            {cycleContext.cycle?.theme && ` - ${cycleContext.cycle.theme}`}
                         </p>
-                        <p className="text-sm text-foreground/50 mt-1">
-                            Your suggestions: {getUserSuggestionCount()} / {activePhase.max_suggestions_per_user}
-                        </p>
-                        {currentUser?.role === 'admin' && hasExceededLimit() && (
-                            <p className="text-sm text-yellow-400 mt-2">
-                                ⚠️ You have exceeded the suggestion limit ({activePhase.max_suggestions_per_user}). Consider removing some suggestions.
+                        {cycleContext.suggestionPhase && (
+                            <p className="text-sm text-foreground/50 mt-1">
+                                Your suggestions: {getUserSuggestionCount()} / {cycleContext.suggestionPhase.max_suggestions_per_user}
                             </p>
                         )}
-                        {currentUser?.role === 'member' && isAtLimit() && activePhase.type === 'suggestion' && (
+                        {cycleContext.isVotingOpen && (
+                            <p className="text-sm text-blue-400 mt-2">
+                                🗳️ Voting is now open! Visit the voting page to cast your votes.
+                            </p>
+                        )}
+                        {cycleContext.hasVotingEnded && (
+                            <p className="text-sm text-green-400 mt-2">
+                                ✅ Voting complete! Check the results on the voting page.
+                            </p>
+                        )}
+                        {currentUser?.role === 'admin' && hasExceededLimit() && cycleContext.suggestionPhase && (
+                            <p className="text-sm text-yellow-400 mt-2">
+                                ⚠️ You have exceeded the suggestion limit ({cycleContext.suggestionPhase.max_suggestions_per_user}). Consider removing some suggestions.
+                            </p>
+                        )}
+                        {currentUser?.role === 'member' && isAtLimit() && cycleContext.isSuggestionOpen && cycleContext.suggestionPhase && (
                             <p className="text-sm text-foreground/60 mt-2">
-                                You have reached the maximum of {activePhase.max_suggestions_per_user} suggestion(s) for this phase.
+                                You have reached the maximum of {cycleContext.suggestionPhase.max_suggestions_per_user} suggestion(s) for this phase.
                             </p>
                         )}
                     </div>
@@ -280,6 +244,8 @@ export default function SuggestionsPage() {
                                 suggestion={suggestion}
                                 canDelete={canDelete(suggestion)}
                                 onDelete={handleDeleteSuggestion}
+                                canEdit={currentUser?.role === 'admin'}
+                                onEdit={handleEditSuggestion}
                             />
                         ))}
                     </div>
@@ -287,128 +253,33 @@ export default function SuggestionsPage() {
             </div>
 
             {/* Search Modal */}
-            {showSearchModal && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="max-w-2xl w-full bg-[#18181B] rounded-m border border-[#27272A] p-6 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-2xl font-serif font-semibold text-foreground">
-                                {selectedBook ? 'Confirm Suggestion' : 'Search for a Book'}
-                            </h2>
-                            <button
-                                onClick={() => {
-                                    setShowSearchModal(false);
-                                    setSelectedBook(null);
-                                    setSearchResults([]);
-                                }}
-                                className="text-foreground/60 hover:text-foreground"
-                            >
-                                ✕
-                            </button>
-                        </div>
+            {cycleContext?.suggestionPhase && (
+                <BookSearchModal
+                    isOpen={showSearchModal}
+                    onClose={() => setShowSearchModal(false)}
+                    activePhase={cycleContext.suggestionPhase}
+                    currentUser={currentUser}
+                    onSubmitSuccess={loadSuggestions}
+                />
+            )}
 
-                        {!selectedBook ? (
-                            <>
-                                <form onSubmit={handleSearch} className="mb-4">
-                                    <input
-                                        type="text"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        placeholder="Search by title, author, or ISBN..."
-                                        className="w-full px-4 py-2 bg-[#18181B]/40 border border-[#27272A] rounded-lg text-foreground focus:outline-none focus:border-accent"
-                                    />
-                                    <button
-                                        type="submit"
-                                        className="w-full mt-2 px-6 py-2 bg-accent/20 border border-accent rounded-full text-foreground hover:bg-accent/30 transition-colors"
-                                    >
-                                        Search
-                                    </button>
-                                </form>
-
-                                <div className="space-y-3">
-                                    {searchResults.map((book, index) => (
-                                        <div
-                                            key={index}
-                                            onClick={() => handleSelectBook(book)}
-                                            className="flex gap-4 p-3 bg-[#18181B]/40 border border-[#27272A] rounded-lg hover:border-accent cursor-pointer transition-all"
-                                        >
-                                            {book.coverImageUrl && (
-                                                <img
-                                                    src={book.coverImageUrl}
-                                                    alt={book.title}
-                                                    className="w-16 h-24 object-cover rounded"
-                                                />
-                                            )}
-                                            <div>
-                                                <h3 className="text-foreground font-medium">{book.title}</h3>
-                                                <p className="text-foreground/60 text-sm">{book.author}</p>
-                                                {book.publishYear && (
-                                                    <p className="text-foreground/40 text-xs mt-1">{book.publishYear}</p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
-                        ) : (
-                            <div>
-                                <div className="flex gap-4 mb-4">
-                                    {selectedBook.coverImageUrl && (
-                                        <img
-                                            src={selectedBook.coverImageUrl}
-                                            alt={selectedBook.title}
-                                            className="w-32 h-48 object-cover rounded-lg"
-                                        />
-                                    )}
-                                    <div>
-                                        <h3 className="text-xl font-serif font-semibold text-foreground mb-1">
-                                            {selectedBook.title}
-                                        </h3>
-                                        <p className="text-foreground/70">by {selectedBook.author}</p>
-                                        {selectedBook.publishYear && (
-                                            <p className="text-foreground/50 text-sm mt-1">{selectedBook.publishYear}</p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {currentUser?.role === 'admin' && hasExceededLimit() && (
-                                    <div className="mb-4 p-3 bg-yellow-400/10 border border-yellow-400/30 rounded-lg">
-                                        <p className="text-yellow-400 text-sm">
-                                            ⚠️ You are about to exceed the suggestion limit of {activePhase?.max_suggestions_per_user}.
-                                            As an admin, you can still add this suggestion.
-                                        </p>
-                                    </div>
-                                )}
-
-                                <div className="mb-4">
-                                    <label className="block text-foreground/70 text-sm mb-2">
-                                        Why do you recommend this book? (optional)
-                                    </label>
-                                    <textarea
-                                        value={suggestionReason}
-                                        onChange={(e) => setSuggestionReason(e.target.value)}
-                                        placeholder="Share why you think the club should read this..."
-                                        className="w-full px-4 py-2 bg-[#18181B]/40 border border-[#27272A] rounded-lg text-foreground focus:outline-none focus:border-accent min-h-[100px]"
-                                    />
-                                </div>
-
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setSelectedBook(null)}
-                                        className="flex-1 px-6 py-2 bg-[#18181B]/40 border border-[#27272A] rounded-full text-foreground hover:border-foreground/40 transition-colors"
-                                    >
-                                        Back
-                                    </button>
-                                    <button
-                                        onClick={handleSubmitSuggestion}
-                                        className="flex-1 px-6 py-2 bg-accent/20 border border-accent rounded-full text-foreground hover:bg-accent/30 transition-colors"
-                                    >
-                                        Submit Suggestion
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
+            {/* Edit Modal */}
+            {editingSuggestion && (
+                <EditBookModal
+                    isOpen={showEditModal}
+                    onClose={() => {
+                        setShowEditModal(false);
+                        setEditingSuggestion(null);
+                    }}
+                    bookId={editingSuggestion.book_id}
+                    initialData={{
+                        title: editingSuggestion.title || '',
+                        author: editingSuggestion.author || '',
+                        description: editingSuggestion.description,
+                        pageCount: editingSuggestion.page_count
+                    }}
+                    onSaveSuccess={handleEditSuccess}
+                />
             )}
         </div>
     );

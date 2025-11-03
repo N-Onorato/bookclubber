@@ -214,11 +214,208 @@ export class BookService {
     }
 
     /**
+     * Get book by title and author (case-insensitive)
+     */
+    static async getBookByTitleAuthor(title: string, author: string): Promise<Book | null> {
+        const db = getDatabase();
+        const book = db.prepare('SELECT * FROM books WHERE LOWER(title) = LOWER(?) AND LOWER(author) = LOWER(?) AND deleted_at IS NULL')
+            .get(title, author) as Book | undefined;
+        return book || null;
+    }
+
+    /**
      * Get all books
      */
     static async getAllBooks(): Promise<Book[]> {
         const db = getDatabase();
         return db.prepare('SELECT * FROM books WHERE deleted_at IS NULL ORDER BY title').all() as Book[];
+    }
+
+    /**
+     * Create or update a manually entered book
+     * Similar to createOrUpdateBook but handles uploaded images differently
+     */
+    static async createOrUpdateBookManual(bookData: {
+        source: string;
+        sourceId: string;
+        title: string;
+        author: string;
+        isbn?: string;
+        publishYear?: number;
+        pageCount?: number;
+        coverImageUrl?: string;
+        coverImagePath?: string; // Path from uploaded image
+        description?: string;
+    }): Promise<Book> {
+        const db = getDatabase();
+
+        // Check if book already exists
+        const existingBook = db.prepare('SELECT * FROM books WHERE source = ? AND source_id = ?')
+            .get(bookData.source, bookData.sourceId) as Book | undefined;
+
+        const now = new Date().toISOString();
+
+        // Handle cover image
+        let localCoverPath: string | null = null;
+        let coverUrl: string | null = null;
+
+        if (bookData.coverImagePath) {
+            // Use uploaded image path directly
+            localCoverPath = bookData.coverImagePath;
+            coverUrl = null; // No external URL
+        } else if (bookData.coverImageUrl) {
+            // Download from URL
+            const bookId = existingBook?.id || randomUUID();
+            localCoverPath = await ImageService.downloadAndSaveImage(bookData.coverImageUrl, bookId);
+            coverUrl = bookData.coverImageUrl;
+        }
+
+        if (existingBook) {
+            // Update existing book
+            db.prepare(`
+                UPDATE books
+                SET title = ?, author = ?, isbn = ?, publication_date = ?,
+                    page_count = ?, cover_url = ?, description = ?, updated_at = ?,
+                    local_cover_path = ?, original_cover_url = ?
+                WHERE id = ?
+            `).run(
+                bookData.title,
+                bookData.author,
+                bookData.isbn || null,
+                bookData.publishYear ? `${bookData.publishYear}-01-01` : null,
+                bookData.pageCount || null,
+                coverUrl,
+                bookData.description || null,
+                now,
+                localCoverPath,
+                coverUrl,
+                existingBook.id
+            );
+
+            return db.prepare('SELECT * FROM books WHERE id = ?').get(existingBook.id) as Book;
+        } else {
+            // Create new book
+            const bookId = randomUUID();
+
+            db.prepare(`
+                INSERT INTO books (
+                    id, source, source_id, title, author, isbn, publication_date,
+                    page_count, cover_url, description, status, created_at, updated_at,
+                    local_cover_path, original_cover_url
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'suggested', ?, ?, ?, ?)
+            `).run(
+                bookId,
+                bookData.source,
+                bookData.sourceId,
+                bookData.title,
+                bookData.author,
+                bookData.isbn || null,
+                bookData.publishYear ? `${bookData.publishYear}-01-01` : null,
+                bookData.pageCount || null,
+                coverUrl,
+                bookData.description || null,
+                now,
+                now,
+                localCoverPath,
+                coverUrl
+            );
+
+            return db.prepare('SELECT * FROM books WHERE id = ?').get(bookId) as Book;
+        }
+    }
+
+    /**
+     * Update book details
+     */
+    static async updateBook(
+        bookId: string,
+        updates: {
+            source?: string;
+            sourceId?: string;
+            title?: string;
+            author?: string;
+            isbn?: string;
+            publishYear?: number;
+            pageCount?: number;
+            coverImageUrl?: string;
+            description?: string;
+        }
+    ): Promise<Book> {
+        const db = getDatabase();
+        const now = new Date().toISOString();
+
+        // Get existing book
+        const existingBook = await this.getBookById(bookId);
+        if (!existingBook) {
+            throw new Error('Book not found');
+        }
+
+        // Download cover image locally if URL provided
+        let localCoverPath = existingBook.local_cover_path || undefined;
+        if (updates.coverImageUrl && updates.coverImageUrl !== existingBook.cover_url) {
+            const downloadedPath = await ImageService.downloadAndSaveImage(updates.coverImageUrl, bookId);
+            localCoverPath = downloadedPath || undefined;
+        }
+
+        // Build update query dynamically based on provided fields
+        const updateFields: string[] = ['updated_at = ?'];
+        const updateValues: any[] = [now];
+
+        if (updates.source !== undefined) {
+            updateFields.push('source = ?');
+            updateValues.push(updates.source);
+        }
+        if (updates.sourceId !== undefined) {
+            updateFields.push('source_id = ?');
+            updateValues.push(updates.sourceId);
+        }
+        if (updates.title !== undefined) {
+            updateFields.push('title = ?');
+            updateValues.push(updates.title);
+        }
+        if (updates.author !== undefined) {
+            updateFields.push('author = ?');
+            updateValues.push(updates.author);
+        }
+        if (updates.isbn !== undefined) {
+            updateFields.push('isbn = ?');
+            updateValues.push(updates.isbn);
+        }
+        if (updates.publishYear !== undefined) {
+            updateFields.push('publication_date = ?');
+            updateValues.push(updates.publishYear ? `${updates.publishYear}-01-01` : null);
+        }
+        if (updates.pageCount !== undefined) {
+            updateFields.push('page_count = ?');
+            updateValues.push(updates.pageCount);
+        }
+        if (updates.coverImageUrl !== undefined) {
+            updateFields.push('cover_url = ?');
+            updateValues.push(updates.coverImageUrl);
+            updateFields.push('original_cover_url = ?');
+            updateValues.push(updates.coverImageUrl);
+        }
+        if (updates.description !== undefined) {
+            updateFields.push('description = ?');
+            updateValues.push(updates.description);
+        }
+        if (localCoverPath !== existingBook.local_cover_path) {
+            updateFields.push('local_cover_path = ?');
+            updateValues.push(localCoverPath);
+        }
+
+        updateValues.push(bookId);
+
+        const query = `
+            UPDATE books
+            SET ${updateFields.join(', ')}
+            WHERE id = ?
+        `;
+
+        db.prepare(query).run(...updateValues);
+
+        return db.prepare('SELECT * FROM books WHERE id = ?').get(bookId) as Book;
     }
 
     /**

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { VoteService } from '@/lib/services/voteService';
 import { PhaseService } from '@/lib/services/phaseService';
+import { CycleService } from '@/lib/services/cycleServiceNew';
 import { getCurrentUser } from '@/lib/auth';
+import { getDatabase } from '@/lib/db/connection';
 
 /**
  * GET /api/votes/results?phaseId=xxx - Get voting results for a phase
@@ -45,6 +47,21 @@ export async function GET(request: NextRequest) {
 
         // Determine if there's a tie
         const isTie = winningBooks.length > 1;
+
+        // Automatically set winner if voting ended and there's no tie
+        const cycle = await CycleService.getCycleById(phase.cycle_id);
+        if (votingEnded && !isTie && winningBooks.length === 1 && !cycle?.winner_book_id) {
+            const winningBookId = winningBooks[0].id;
+            await CycleService.setWinningBook(phase.cycle_id, winningBookId);
+
+            // Update the book status to 'reading'
+            const db = getDatabase();
+            db.prepare(`
+                UPDATE books
+                SET status = 'reading'
+                WHERE id = ?
+            `).run(winningBookId);
+        }
 
         return NextResponse.json({
             voteCounts,

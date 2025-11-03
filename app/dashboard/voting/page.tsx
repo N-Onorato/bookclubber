@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import VotingCard from './VotingCard';
 import VotingResults from './VotingResults';
-import { Phase, Vote } from '@/lib/types';
+import { Vote } from '@/lib/types';
 
 interface BookWithVotes {
     id: string;
@@ -17,13 +17,12 @@ interface BookWithVotes {
 }
 
 export default function VotingPage() {
-    const [activePhase, setActivePhase] = useState<Phase | null>(null);
+    const [cycleContext, setCycleContext] = useState<any>(null);
     const [books, setBooks] = useState<BookWithVotes[]>([]);
     const [userVotes, setUserVotes] = useState<Vote[]>([]);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [timeRemaining, setTimeRemaining] = useState<number>(0);
-    const [votingEnded, setVotingEnded] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -31,16 +30,17 @@ export default function VotingPage() {
 
     // Timer countdown
     useEffect(() => {
-        if (!activePhase) return;
+        if (!cycleContext?.votingPhase) return;
 
         const updateTimer = () => {
             const now = new Date().getTime();
-            const endsAt = new Date(activePhase.ends_at).getTime();
+            const endsAt = new Date(cycleContext.votingPhase.ends_at).getTime();
             const remaining = Math.max(0, endsAt - now);
             setTimeRemaining(remaining);
 
-            if (remaining === 0 && !votingEnded) {
-                setVotingEnded(true);
+            // If voting just ended (within the last second), reload the page data
+            if (remaining === 0 && !cycleContext.hasVotingEnded) {
+                loadActiveCycle();
             }
         };
 
@@ -48,13 +48,13 @@ export default function VotingPage() {
         const interval = setInterval(updateTimer, 1000);
 
         return () => clearInterval(interval);
-    }, [activePhase, votingEnded]);
+    }, [cycleContext]);
 
     const loadData = async () => {
         try {
             await Promise.all([
                 loadCurrentUser(),
-                loadActivePhase(),
+                loadActiveCycle(),
             ]);
         } finally {
             setLoading(false);
@@ -73,25 +73,19 @@ export default function VotingPage() {
         }
     };
 
-    const loadActivePhase = async () => {
+    const loadActiveCycle = async () => {
         try {
             const response = await fetch('/api/cycles/active');
             if (response.ok) {
                 const data = await response.json();
-                if (data.phase && data.phase.type === 'voting') {
-                    setActivePhase(data.phase);
-                    await loadBooksAndVotes(data.phase.id);
+                setCycleContext(data);
 
-                    // Check if voting has ended
-                    const now = new Date();
-                    const endsAt = new Date(data.phase.ends_at);
-                    if (now > endsAt) {
-                        setVotingEnded(true);
-                    }
+                if (data.votingPhase) {
+                    await loadBooksAndVotes(data.votingPhase.id);
                 }
             }
         } catch (error) {
-            console.error('Error loading active phase:', error);
+            console.error('Error loading active cycle:', error);
         }
     };
 
@@ -134,20 +128,20 @@ export default function VotingPage() {
     };
 
     const handleVote = async (bookId: string) => {
-        if (!activePhase || votingEnded) return;
+        if (!cycleContext?.votingPhase || cycleContext.hasVotingEnded) return;
 
         try {
             const response = await fetch('/api/votes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    phaseId: activePhase.id,
+                    phaseId: cycleContext.votingPhase.id,
                     bookId
                 })
             });
 
             if (response.ok) {
-                await loadBooksAndVotes(activePhase.id);
+                await loadBooksAndVotes(cycleContext.votingPhase.id);
             } else {
                 const data = await response.json();
                 alert(`Error: ${data.error}`);
@@ -159,20 +153,20 @@ export default function VotingPage() {
     };
 
     const handleUnvote = async (bookId: string) => {
-        if (!activePhase || votingEnded) return;
+        if (!cycleContext?.votingPhase || cycleContext.hasVotingEnded) return;
 
         try {
             const response = await fetch('/api/votes', {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    phaseId: activePhase.id,
+                    phaseId: cycleContext.votingPhase.id,
                     bookId
                 })
             });
 
             if (response.ok) {
-                await loadBooksAndVotes(activePhase.id);
+                await loadBooksAndVotes(cycleContext.votingPhase.id);
             } else {
                 const data = await response.json();
                 alert(`Error: ${data.error}`);
@@ -210,8 +204,8 @@ export default function VotingPage() {
     };
 
     const canVote = () => {
-        if (!activePhase || !currentUser || votingEnded) return false;
-        return getUserVoteCount() < activePhase.max_votes_per_user;
+        if (!cycleContext?.votingPhase || !currentUser || cycleContext.hasVotingEnded) return false;
+        return getUserVoteCount() < cycleContext.votingPhase.max_votes_per_user;
     };
 
     if (loading) {
@@ -222,7 +216,7 @@ export default function VotingPage() {
         );
     }
 
-    if (!activePhase) {
+    if (!cycleContext?.votingPhase) {
         return (
             <div className="min-h-screen p-8">
                 <div className="max-w-6xl mx-auto">
@@ -239,8 +233,27 @@ export default function VotingPage() {
     }
 
     // Show results if voting has ended
-    if (votingEnded) {
-        return <VotingResults phaseId={activePhase.id} currentUser={currentUser} />;
+    if (cycleContext.hasVotingEnded) {
+        return <VotingResults phaseId={cycleContext.votingPhase.id} currentUser={currentUser} />;
+    }
+
+    // Show countdown if voting hasn't started yet
+    if (!cycleContext.isVotingOpen) {
+        const startsAt = new Date(cycleContext.votingPhase.starts_at);
+        return (
+            <div className="min-h-screen p-8">
+                <div className="max-w-6xl mx-auto">
+                    <Link href="/dashboard" className="text-accent hover:underline text-sm mb-4 block">
+                        ← Back to Dashboard
+                    </Link>
+                    <div className="p-8 bg-[#18181B]/60 backdrop-blur-lg rounded-2xl border border-[#27272A] text-center">
+                        <h2 className="text-2xl font-serif text-foreground mb-4">Voting Opens Soon</h2>
+                        <p className="text-foreground/60 mb-2">Voting begins on:</p>
+                        <p className="text-xl font-semibold text-accent">{startsAt.toLocaleString()}</p>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -257,11 +270,11 @@ export default function VotingPage() {
                         </h1>
                         <p className="text-foreground/60">
                             🗳️ Voting Phase
-                            {activePhase.theme && ` - ${activePhase.theme}`}
+                            {cycleContext.cycle?.theme && ` - ${cycleContext.cycle.theme}`}
                         </p>
                         <div className="flex gap-4 items-center mt-3">
                             <p className="text-sm text-foreground/50">
-                                Your votes: <span className="text-accent font-semibold">{getUserVoteCount()} / {activePhase.max_votes_per_user}</span>
+                                Your votes: <span className="text-accent font-semibold">{getUserVoteCount()} / {cycleContext.votingPhase.max_votes_per_user}</span>
                             </p>
                             <div className="h-4 w-px bg-foreground/20"></div>
                             <p className="text-sm text-foreground/50">
@@ -276,7 +289,7 @@ export default function VotingPage() {
             <div className="max-w-6xl mx-auto mb-6">
                 <div className="p-4 bg-accent/10 border border-accent/30 rounded-xl">
                     <p className="text-foreground/70 text-sm">
-                        Cast up to {activePhase.max_votes_per_user} vote(s) for your favorite book(s).
+                        Cast up to {cycleContext.votingPhase.max_votes_per_user} vote(s) for your favorite book(s).
                         You can change your votes until the timer runs out.
                         Other members cannot see your votes until voting ends.
                     </p>

@@ -1,10 +1,11 @@
 import { randomUUID } from 'crypto';
 import { getDatabase } from '../db/connection';
-import { Cycle, CycleWithPhases } from '../types';
+import { Cycle, CycleWithPhases, CycleStatus } from '../types';
 
 export class CycleService {
     /**
      * Create a new cycle
+     * NOTE: New cycles become 'active' if no other cycle has active phases
      */
     static async createCycle(
         name?: string,
@@ -12,18 +13,42 @@ export class CycleService {
     ): Promise<Cycle> {
         const db = getDatabase();
 
-        const cycleId = randomUUID();
+        // Check if there's an active cycle with active phases
         const now = new Date().toISOString();
+        const existingActiveWithPhases = db.prepare(`
+            SELECT c.id
+            FROM cycles c
+            INNER JOIN phases p ON c.id = p.cycle_id
+            WHERE c.status = 'active'
+            AND p.starts_at <= ?
+            AND p.ends_at >= ?
+            LIMIT 1
+        `).get(now, now) as { id: string } | undefined;
+
+        // If previous active cycle has no active phases, set it to completed
+        if (!existingActiveWithPhases) {
+            db.prepare(`
+                UPDATE cycles
+                SET status = 'completed', updated_at = ?
+                WHERE status = 'active'
+            `).run(now);
+        }
+
+        const cycleId = randomUUID();
+
+        // Determine initial status: active if no cycle has active phases, otherwise draft
+        const initialStatus = existingActiveWithPhases ? 'draft' : 'active';
 
         const stmt = db.prepare(`
-            INSERT INTO cycles (id, name, theme, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO cycles (id, name, theme, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
         `);
 
         stmt.run(
             cycleId,
             name || null,
             theme || null,
+            initialStatus,
             now,
             now
         );
@@ -107,7 +132,7 @@ export class CycleService {
      */
     static async updateCycle(
         cycleId: string,
-        updates: { name?: string; theme?: string; winner_book_id?: string }
+        updates: { name?: string; theme?: string; winner_book_id?: string; status?: CycleStatus }
     ): Promise<void> {
         const db = getDatabase();
 
@@ -125,6 +150,20 @@ export class CycleService {
         if (updates.winner_book_id !== undefined) {
             fields.push('winner_book_id = ?');
             values.push(updates.winner_book_id);
+        }
+        if (updates.status !== undefined) {
+            // If setting to active, ensure no other cycle is active
+            if (updates.status === 'active') {
+                const existingActive = db.prepare(`
+                    SELECT id FROM cycles WHERE status = 'active' AND id != ?
+                `).get(cycleId) as Cycle | undefined;
+
+                if (existingActive) {
+                    throw new Error('Another cycle is already active. Please complete or archive it first.');
+                }
+            }
+            fields.push('status = ?');
+            values.push(updates.status);
         }
 
         if (fields.length === 0) return;
@@ -150,25 +189,88 @@ export class CycleService {
     }
 
     /**
-     * Get the current active cycle (based on active phases)
+     * Get the current active cycle (based on status = 'active')
+     * Returns the active cycle with all its phases
      */
     static async getActiveCycle(): Promise<CycleWithPhases | null> {
         const db = getDatabase();
-        const now = new Date().toISOString();
 
-        // Find a cycle that has an active phase
+        // Find the cycle marked as active
         const result = db.prepare(`
-            SELECT DISTINCT c.*
-            FROM cycles c
-            JOIN phases p ON c.id = p.cycle_id
-            WHERE p.starts_at <= ?
-              AND p.ends_at >= ?
-            ORDER BY p.starts_at DESC
+            SELECT * FROM cycles
+            WHERE status = 'active'
             LIMIT 1
-        `).get(now, now) as Cycle | undefined;
+        `).get() as Cycle | undefined;
 
         if (!result) return null;
 
         return this.getCycleWithPhases(result.id);
+    }
+
+    /**
+     * Get the most recently created cycle (regardless of status)
+     */
+    static async getLatestCycle(): Promise<CycleWithPhases | null> {
+        const db = getDatabase();
+
+        const result = db.prepare(`
+            SELECT * FROM cycles
+            ORDER BY created_at DESC
+            LIMIT 1
+        `).get() as Cycle | undefined;
+
+        if (!result) return null;
+
+        return this.getCycleWithPhases(result.id);
+    }
+
+    /**
+     * Get cycles by status
+     */
+    static async getCyclesByStatus(status: CycleStatus): Promise<CycleWithPhases[]> {
+        const db = getDatabase();
+
+        const cycles = db.prepare(`
+            SELECT * FROM cycles
+            WHERE status = ?
+            ORDER BY created_at DESC
+        `).all(status) as Cycle[];
+
+        const cyclesWithPhases: CycleWithPhases[] = [];
+
+        for (const cycle of cycles) {
+            const withPhases = await this.getCycleWithPhases(cycle.id);
+            if (withPhases) {
+                cyclesWithPhases.push(withPhases);
+            }
+        }
+
+        return cyclesWithPhases;
+    }
+
+    /**
+     * Update cycle status
+     * Convenience method for status transitions
+     */
+    static async updateCycleStatus(cycleId: string, status: CycleStatus): Promise<void> {
+        return this.updateCycle(cycleId, { status });
+    }
+
+    /**
+     * Check if a cycle has any currently active phases (date-based)
+     */
+    static async hasActivePhases(cycleId: string): Promise<boolean> {
+        const db = getDatabase();
+        const now = new Date().toISOString();
+
+        const result = db.prepare(`
+            SELECT COUNT(*) as count
+            FROM phases
+            WHERE cycle_id = ?
+              AND starts_at <= ?
+              AND ends_at >= ?
+        `).get(cycleId, now, now) as { count: number };
+
+        return result.count > 0;
     }
 }

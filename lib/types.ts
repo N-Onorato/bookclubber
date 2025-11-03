@@ -36,11 +36,17 @@ export interface Book {
 
     // Tracking
     suggested_by_user_id?: string;
-    suggestion_cycle_id?: string;
+    suggestion_phase_id?: string; // Renamed from suggestion_cycle_id in v4 migration
 
     // Status
     status: 'suggested' | 'voting' | 'reading' | 'completed';
     completed_at?: string;
+
+    // External source tracking
+    source?: string;
+    source_id?: string;
+    local_cover_path?: string;
+    original_cover_url?: string;
 
     // System
     created_at: string;
@@ -48,19 +54,24 @@ export interface Book {
     deleted_at?: string;
 }
 
+export type CycleStatus = 'active' | 'completed' | 'archived';
+
 export interface Cycle {
     id: string;
     name?: string;
     theme?: string;
     winner_book_id?: string;
+    status: CycleStatus;
     created_at: string;
     updated_at: string;
 }
 
+export type PhaseType = 'suggestion' | 'voting' | 'reading';
+
 export interface Phase {
     id: string;
     cycle_id: string;
-    type: 'suggestion' | 'voting';
+    type: PhaseType;
     theme?: string;
     starts_at: string;
     ends_at: string;
@@ -154,6 +165,26 @@ export interface Event {
     created_at: string;
 }
 
+export interface ReadingSection {
+    id: string;
+    cycle_id: string;
+    title: string;
+    description?: string;
+    display_order: number;
+    created_by_user_id: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ReadingSectionNote {
+    id: string;
+    section_id: string;
+    user_id: string;
+    content: string;
+    created_at: string;
+    updated_at: string;
+}
+
 // ============================================================================
 // EXTENDED TYPES (with relations)
 // ============================================================================
@@ -180,6 +211,7 @@ export interface SuggestionWithDetails extends Suggestion {
     author?: string;
     cover_image_url?: string;
     description?: string;
+    page_count?: number;
     reason?: string;
     suggested_by?: string;
 }
@@ -197,6 +229,30 @@ export interface ReadingChunkWithDetails extends ReadingChunk {
 
 export interface MeetingWithDetails extends Meeting {
     reading_chunk?: ReadingChunk;
+}
+
+export interface ReadingSectionWithDetails extends ReadingSection {
+    notes?: ReadingSectionNoteWithUser[];
+    created_by?: User;
+}
+
+export interface ReadingSectionNoteWithUser extends ReadingSectionNote {
+    user?: User;
+}
+
+// Cycle context with computed states for UI
+export interface CycleContext extends CycleWithPhases {
+    currentPhase?: Phase;
+    pastPhases: Phase[];
+    futurePhases: Phase[];
+    suggestionPhase?: Phase;
+    votingPhase?: Phase;
+    readingPhase?: Phase;
+    isSuggestionOpen: boolean;
+    isVotingOpen: boolean;
+    hasVotingEnded: boolean;
+    isReading: boolean;
+    winnerBook?: Book;
 }
 
 // ============================================================================
@@ -222,6 +278,17 @@ export interface BookSearchResult {
     coverUrl?: string;
     pageCount?: number;
     subtitle?: string;
+}
+
+// UI-specific search result type for book search modals
+export interface SearchResult {
+    openLibraryId: string;
+    title: string;
+    author: string;
+    coverImageUrl?: string;
+    description?: string;
+    publishYear?: number;
+    pageCount?: number;
 }
 
 // ============================================================================
@@ -260,7 +327,7 @@ export interface CreateCycleRequest {
 
 export interface CreatePhaseRequest {
     cycle_id: string;
-    type: 'suggestion' | 'voting';
+    type: PhaseType;
     theme?: string;
     starts_at: string;
     ends_at: string;
@@ -295,11 +362,32 @@ export interface CreateMeetingRequest {
     notes?: string;
 }
 
+export interface CreateReadingSectionRequest {
+    cycle_id: string;
+    title: string;
+    description?: string;
+    display_order?: number;
+}
+
+export interface UpdateReadingSectionRequest {
+    title?: string;
+    description?: string;
+    display_order?: number;
+}
+
+export interface CreateReadingSectionNoteRequest {
+    section_id: string;
+    content: string;
+}
+
+export interface UpdateReadingSectionNoteRequest {
+    content: string;
+}
+
 // ============================================================================
 // UTILITY TYPES
 // ============================================================================
 
 export type UserRole = User['role'];
 export type BookStatus = Book['status'];
-export type PhaseType = Phase['type'];
 export type RankingTier = Ranking['tier'];
