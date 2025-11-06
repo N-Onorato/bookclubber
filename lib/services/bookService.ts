@@ -339,6 +339,7 @@ export class BookService {
             publishYear?: number;
             pageCount?: number;
             coverImageUrl?: string;
+            coverImagePath?: string;
             description?: string;
         }
     ): Promise<Book> {
@@ -351,11 +352,20 @@ export class BookService {
             throw new Error('Book not found');
         }
 
-        // Download cover image locally if URL provided
+        // Handle cover image updates
         let localCoverPath = existingBook.local_cover_path || undefined;
-        if (updates.coverImageUrl && updates.coverImageUrl !== existingBook.cover_url) {
+        let coverUrl = existingBook.cover_url || undefined;
+
+        // Priority: uploaded path > URL download
+        if (updates.coverImagePath) {
+            // Use uploaded image path directly
+            localCoverPath = updates.coverImagePath;
+            // Don't change coverUrl if we're using uploaded image
+        } else if (updates.coverImageUrl && updates.coverImageUrl !== existingBook.cover_url) {
+            // Download cover image locally if URL provided
             const downloadedPath = await ImageService.downloadAndSaveImage(updates.coverImageUrl, bookId);
             localCoverPath = downloadedPath || undefined;
+            coverUrl = updates.coverImageUrl;
         }
 
         // Build update query dynamically based on provided fields

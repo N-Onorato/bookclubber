@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import { LogoutButton } from './logout-button';
+import { RandomQuote } from '../components/RandomQuote';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -121,10 +122,7 @@ export default async function DashboardPage() {
 
             {/* Quote */}
             <div className="max-w-6xl mx-auto mt-12 text-center">
-                <p className="text-foreground/50 italic font-serif">
-                    "A reader lives a thousand lives before he dies... The man who never reads lives only one."
-                </p>
-                <p className="text-foreground/40 text-sm mt-2">— George R.R. Martin</p>
+                <RandomQuote />
             </div>
         </div>
     );

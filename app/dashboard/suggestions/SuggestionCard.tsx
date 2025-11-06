@@ -39,7 +39,12 @@ export default function SuggestionCard({ suggestion, canDelete, onDelete, canEdi
                             <h3 className="text-2xl font-serif font-semibold text-foreground mb-2">
                                 {suggestion.title || 'Untitled'}
                             </h3>
-                            <p className="text-foreground/70 text-lg mb-3">by {suggestion.author || 'Unknown Author'}</p>
+                            <p className="text-foreground/70 text-lg mb-1">by {suggestion.author || 'Unknown Author'}</p>
+                            {suggestion.page_count && (
+                                <p className="text-foreground/50 text-sm">
+                                    {suggestion.page_count} pages
+                                </p>
+                            )}
                         </div>
                         <div className="flex gap-2 flex-wrap sm:flex-nowrap">
                             {canEdit && onEdit && (

@@ -276,7 +276,8 @@ export default function SuggestionsPage() {
                         title: editingSuggestion.title || '',
                         author: editingSuggestion.author || '',
                         description: editingSuggestion.description,
-                        pageCount: editingSuggestion.page_count
+                        pageCount: editingSuggestion.page_count,
+                        coverImageUrl: editingSuggestion.cover_image_url
                     }}
                     onSaveSuccess={handleEditSuccess}
                 />

@@ -1,3 +1,5 @@
+import { RandomQuote } from './components/RandomQuote';
+
 export default function Home() {
   return (
     <main className="min-h-screen flex items-center justify-center py-16 px-4">
@@ -99,9 +101,7 @@ export default function Home() {
 
         {/* Literary quote */}
         <div className="mt-20 text-center">
-          <p className="text-sm text-[#71717A] italic font-serif max-w-2xl mx-auto leading-relaxed">
-            "Books are a uniquely portable magic. In them, we find mirrors of ourselves and windows into worlds unknown."
-          </p>
+          <RandomQuote />
         </div>
       </div>
     </main>

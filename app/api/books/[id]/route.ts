@@ -15,10 +15,10 @@ export async function PATCH(
         await requireAdmin();
 
         const body = await request.json();
-        const { title, author, description, pageCount, publishYear } = body;
+        const { title, author, description, pageCount, publishYear, coverImagePath } = body;
 
         // Validate that at least one field is provided
-        if (!title && !author && !description && pageCount === undefined && publishYear === undefined) {
+        if (!title && !author && !description && pageCount === undefined && publishYear === undefined && !coverImagePath) {
             return NextResponse.json(
                 { error: 'At least one field must be provided to update' },
                 { status: 400 }
@@ -30,7 +30,8 @@ export async function PATCH(
             author,
             description,
             pageCount,
-            publishYear
+            publishYear,
+            coverImagePath
         });
 
         if (!updatedBook) {
