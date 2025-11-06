@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import { SuggestionWithDetails } from '@/lib/types';
 import BacklitCard from '@/components/BacklitCard';
 
@@ -10,13 +13,17 @@ interface SuggestionCardProps {
 }
 
 export default function SuggestionCard({ suggestion, canDelete, onDelete, canEdit, onEdit }: SuggestionCardProps) {
+    const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+    const descriptionCharLimit = 300;
+    const shouldTruncateDescription = suggestion.description && suggestion.description.length > descriptionCharLimit;
+
     return (
         <BacklitCard glowColor="amber" intensity="subtle">
             <div className="p-6 bg-[#18181B]/60 backdrop-blur-lg rounded-2xl border border-[#27272A] hover:border-accent transition-all">
-            <div className="flex gap-6">
-                {/* Book Cover - Left Side */}
+            <div className="flex flex-col md:flex-row gap-6">
+                {/* Book Cover - Top on mobile, Left on desktop */}
                 {suggestion.cover_image_url && (
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 mx-auto md:mx-0">
                         <img
                             src={suggestion.cover_image_url}
                             alt={suggestion.title}
@@ -25,20 +32,20 @@ export default function SuggestionCard({ suggestion, canDelete, onDelete, canEdi
                     </div>
                 )}
 
-                {/* Book Details - Right Side */}
+                {/* Book Details - Bottom on mobile, Right on desktop */}
                 <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start mb-3">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-3">
                         <div className="flex-1">
                             <h3 className="text-2xl font-serif font-semibold text-foreground mb-2">
                                 {suggestion.title || 'Untitled'}
                             </h3>
                             <p className="text-foreground/70 text-lg mb-3">by {suggestion.author || 'Unknown Author'}</p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
                             {canEdit && onEdit && (
                                 <button
                                     onClick={() => onEdit(suggestion)}
-                                    className="px-3 py-1 text-sm bg-blue-500/10 border border-blue-500/30 rounded-full text-blue-400 hover:bg-blue-500/20 transition-colors"
+                                    className="px-3 py-1 text-sm bg-blue-500/10 border border-blue-500/30 rounded-full text-blue-400 hover:bg-blue-500/20 transition-colors whitespace-nowrap"
                                     title="Edit book details"
                                 >
                                     Edit
@@ -47,7 +54,7 @@ export default function SuggestionCard({ suggestion, canDelete, onDelete, canEdi
                             {canDelete && (
                                 <button
                                     onClick={() => onDelete(suggestion.id)}
-                                    className="px-3 py-1 text-sm bg-red-500/10 border border-red-500/30 rounded-full text-red-400 hover:bg-red-500/20 transition-colors"
+                                    className="px-3 py-1 text-sm bg-red-500/10 border border-red-500/30 rounded-full text-red-400 hover:bg-red-500/20 transition-colors whitespace-nowrap"
                                     title="Delete suggestion"
                                 >
                                     Delete
@@ -57,9 +64,21 @@ export default function SuggestionCard({ suggestion, canDelete, onDelete, canEdi
                     </div>
 
                     {suggestion.description && (
-                        <p className="text-foreground/60 text-sm mb-4 leading-relaxed">
-                            {suggestion.description}
-                        </p>
+                        <div className="mb-4">
+                            <p className="text-foreground/60 text-sm leading-relaxed">
+                                {shouldTruncateDescription && !isDescriptionExpanded
+                                    ? `${suggestion.description.slice(0, descriptionCharLimit)}...`
+                                    : suggestion.description}
+                            </p>
+                            {shouldTruncateDescription && (
+                                <button
+                                    onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                                    className="mt-2 text-xs text-accent hover:text-accent/80 transition-colors underline"
+                                >
+                                    {isDescriptionExpanded ? 'Show less' : 'Read more'}
+                                </button>
+                            )}
+                        </div>
                     )}
 
                     {suggestion.reason && (
