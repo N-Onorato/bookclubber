@@ -60,6 +60,14 @@ export default function CyclesManagement() {
         }
     };
 
+    // Helper function to convert datetime-local string to ISO 8601 with timezone
+    const toISOWithTimezone = (datetimeLocal: string): string => {
+        // datetime-local format: "2025-11-05T20:35"
+        // We need to convert this to ISO 8601 with timezone: "2025-11-05T20:35:00-05:00"
+        const date = new Date(datetimeLocal);
+        return date.toISOString(); // This returns UTC time, which preserves the actual moment
+    };
+
     const handleCreateCycle = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -90,8 +98,8 @@ export default function CyclesManagement() {
                 body: JSON.stringify({
                     cycleId,
                     type: 'suggestion',
-                    startsAt: formData.suggestionStart,
-                    endsAt: formData.votingStart,
+                    startsAt: toISOWithTimezone(formData.suggestionStart),
+                    endsAt: toISOWithTimezone(formData.votingStart),
                     theme: formData.theme || undefined,
                     maxSuggestionsPerUser: formData.maxSuggestionsPerUser,
                     maxVotesPerUser: formData.maxVotesPerUser
@@ -111,8 +119,8 @@ export default function CyclesManagement() {
                 body: JSON.stringify({
                     cycleId,
                     type: 'voting',
-                    startsAt: formData.votingStart,
-                    endsAt: formData.votingEnd,
+                    startsAt: toISOWithTimezone(formData.votingStart),
+                    endsAt: toISOWithTimezone(formData.votingEnd),
                     theme: formData.theme || undefined,
                     maxSuggestionsPerUser: formData.maxSuggestionsPerUser,
                     maxVotesPerUser: formData.maxVotesPerUser
@@ -132,8 +140,8 @@ export default function CyclesManagement() {
                 body: JSON.stringify({
                     cycleId,
                     type: 'reading',
-                    startsAt: formData.votingEnd, // Placeholder - reading phase has no inherent time
-                    endsAt: formData.votingEnd, // Placeholder - reading phase has no inherent time
+                    startsAt: toISOWithTimezone(formData.votingEnd), // Placeholder - reading phase has no inherent time
+                    endsAt: toISOWithTimezone(formData.votingEnd), // Placeholder - reading phase has no inherent time
                     theme: formData.theme || undefined,
                     maxSuggestionsPerUser: formData.maxSuggestionsPerUser,
                     maxVotesPerUser: formData.maxVotesPerUser
