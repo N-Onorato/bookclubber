@@ -47,9 +47,10 @@ export default function VotingResults({ phaseId, currentUser }: VotingResultsPro
                 setIsTie(data.isTie);
                 setPhase(data.phase);
 
-                // Note: winner is now stored on the cycle, not phase
-                // We would need to fetch the parent cycle to check winner_book_id
-                // For now, selectedWinner will be set after admin selects it
+                // Check if a winner has been selected (either automatically or by admin)
+                if (data.winnerBookId) {
+                    setSelectedWinner(data.winnerBookId);
+                }
             }
         } catch (error) {
             console.error('Error loading results:', error);

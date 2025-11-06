@@ -65,13 +65,17 @@ export async function GET(request: NextRequest) {
             `).run(winningBookId);
         }
 
+        // Fetch the updated cycle to get the winner_book_id
+        const updatedCycle = await CycleService.getCycleById(phase.cycle_id);
+
         return NextResponse.json({
             voteCounts,
             winningBooks,
             winningVoteCount,
             isTie,
             votingEnded,
-            phase
+            phase,
+            winnerBookId: updatedCycle?.winner_book_id || null
         });
     } catch (error) {
         console.error('Error fetching vote results:', error);
