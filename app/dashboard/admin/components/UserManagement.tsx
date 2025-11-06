@@ -143,7 +143,7 @@ export default function UserManagement() {
                             key={user.id}
                             className="p-4 bg-[#18181B]/60 backdrop-blur-lg rounded-xl border border-[#27272A] hover:border-[#3F3F46] transition-colors"
                         >
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                 <div className="flex-1">
                                     <div className="flex items-center gap-3 mb-1">
                                         <h3 className="font-medium text-foreground">
@@ -161,18 +161,18 @@ export default function UserManagement() {
                                     </p>
                                 </div>
 
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 justify-center sm:justify-end">
                                     <button
                                         onClick={() => handleApprove(user.id)}
                                         disabled={processingUserId === user.id}
-                                        className="px-4 py-2 bg-[#10B981] text-white rounded-lg hover:bg-[#059669] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
+                                        className="px-4 py-2 bg-[#10B981] text-white rounded-lg hover:bg-[#059669] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm whitespace-nowrap"
                                     >
                                         {processingUserId === user.id ? 'Processing...' : 'Approve'}
                                     </button>
                                     <button
                                         onClick={() => handleReject(user.id)}
                                         disabled={processingUserId === user.id}
-                                        className="px-4 py-2 bg-[#EF4444] text-white rounded-lg hover:bg-[#DC2626] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
+                                        className="px-4 py-2 bg-[#EF4444] text-white rounded-lg hover:bg-[#DC2626] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm whitespace-nowrap"
                                     >
                                         Reject
                                     </button>

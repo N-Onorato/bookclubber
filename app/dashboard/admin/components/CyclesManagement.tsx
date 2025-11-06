@@ -390,9 +390,9 @@ export default function CyclesManagement() {
                                     key={cycle.id}
                                     className="p-6 bg-[#18181B]/60 backdrop-blur-lg rounded-2xl border border-[#27272A]"
                                 >
-                                    <div className="flex justify-between items-start mb-4">
+                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
                                         <div className="flex-1">
-                                            <div className="flex items-center gap-3 mb-2">
+                                            <div className="flex flex-wrap items-center gap-3 mb-2">
                                                 <h4 className="text-xl font-serif font-semibold text-foreground">
                                                     {cycle.name || (cycle.theme ? `${cycle.theme} Cycle` : 'Unnamed Cycle')}
                                                 </h4>
@@ -410,18 +410,18 @@ export default function CyclesManagement() {
                                                 Created {new Date(cycle.created_at).toLocaleDateString()}
                                             </p>
                                         </div>
-                                        <div className="flex gap-2">
+                                        <div className="flex flex-wrap gap-2 sm:flex-nowrap">
                                             {cycle.status === 'active' && (
                                                 <>
                                                     <button
                                                         onClick={() => handleUpdateStatus(cycle.id, 'completed')}
-                                                        className="px-3 py-1 text-sm bg-blue-500/20 border border-blue-500/50 rounded-lg text-blue-400 hover:bg-blue-500/30 transition-colors"
+                                                        className="px-3 py-1 text-sm bg-blue-500/20 border border-blue-500/50 rounded-lg text-blue-400 hover:bg-blue-500/30 transition-colors whitespace-nowrap"
                                                     >
                                                         Mark Complete
                                                     </button>
                                                     <button
                                                         onClick={() => handleUpdateStatus(cycle.id, 'archived')}
-                                                        className="px-3 py-1 text-sm bg-gray-500/20 border border-gray-500/50 rounded-lg text-gray-400 hover:bg-gray-500/30 transition-colors"
+                                                        className="px-3 py-1 text-sm bg-gray-500/20 border border-gray-500/50 rounded-lg text-gray-400 hover:bg-gray-500/30 transition-colors whitespace-nowrap"
                                                     >
                                                         Archive
                                                     </button>
@@ -430,14 +430,14 @@ export default function CyclesManagement() {
                                             {cycle.status === 'completed' && (
                                                 <button
                                                     onClick={() => handleUpdateStatus(cycle.id, 'archived')}
-                                                    className="px-3 py-1 text-sm bg-gray-500/20 border border-gray-500/50 rounded-lg text-gray-400 hover:bg-gray-500/30 transition-colors"
+                                                    className="px-3 py-1 text-sm bg-gray-500/20 border border-gray-500/50 rounded-lg text-gray-400 hover:bg-gray-500/30 transition-colors whitespace-nowrap"
                                                 >
                                                     Archive
                                                 </button>
                                             )}
                                             <button
                                                 onClick={() => handleDeleteCycle(cycle.id)}
-                                                className="px-3 py-1 text-sm bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 hover:bg-red-500/30 transition-colors"
+                                                className="px-3 py-1 text-sm bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 hover:bg-red-500/30 transition-colors whitespace-nowrap"
                                             >
                                                 Delete
                                             </button>
