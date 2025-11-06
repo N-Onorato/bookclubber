@@ -1,11 +1,19 @@
-'use client';
-
 import Link from 'next/link';
+import { requireAdmin } from '@/lib/auth';
 import CyclesManagement from './components/CyclesManagement';
 import UserManagement from './components/UserManagement';
 import MembersManagement from './components/MembersManagement';
+import type { Metadata } from 'next';
 
-export default function AdminPage() {
+export const metadata: Metadata = {
+    title: 'Admin Panel | The Book Club',
+    description: 'Manage cycles, members, and club settings',
+};
+
+export default async function AdminPage() {
+    // Server-side admin check - throws if not admin
+    await requireAdmin();
+
     return (
         <div className="min-h-screen p-8">
             {/* Header */}

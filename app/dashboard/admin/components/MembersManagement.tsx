@@ -1,19 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
-interface Member {
-    id: string;
-    email: string;
-    name: string;
-    role: 'admin' | 'member';
-    approved: boolean;
-    approved_at?: string;
-    created_at: string;
-}
+import { User } from '@/lib/types';
 
 export default function MembersManagement() {
-    const [members, setMembers] = useState<Member[]>([]);
+    const [members, setMembers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [processingUserId, setProcessingUserId] = useState<string | null>(null);
