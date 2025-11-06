@@ -21,17 +21,6 @@ export default function Loading() {
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes swipe {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(300%);
-          }
-        }
-      `}</style>
     </div>
   );
 }
