@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { AuthService } from '@/lib/services/authService';
 import { requireAdmin } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/admin/users
  * Get all approved users (members)

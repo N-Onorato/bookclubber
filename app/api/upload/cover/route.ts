@@ -3,6 +3,8 @@ import { requireAuth } from '@/lib/auth';
 import { ImageService } from '@/lib/services/imageService';
 import { randomUUID } from 'crypto';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/upload/cover - Upload a book cover image
  *

@@ -3,6 +3,8 @@ import { SuggestionService } from '@/lib/services/suggestionService';
 import { PhaseService } from '@/lib/services/phaseService';
 import { getCurrentUser } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/suggestions - Create a new suggestion
  */

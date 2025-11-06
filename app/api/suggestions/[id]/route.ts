@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SuggestionService } from '@/lib/services/suggestionService';
 import { getCurrentUser } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * PATCH /api/suggestions/[id] - Update a suggestion
  */

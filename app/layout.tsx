@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 import Vignette from './components/Vignette'
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Book Club Platform',
   description: 'A platform for managing your book club',

@@ -4,6 +4,8 @@ import { CycleService } from '@/lib/services/cycleServiceNew';
 import { BookService } from '@/lib/services/bookService';
 import { requireAuth } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/cycles/active - Get the currently active cycle with all phases and computed metadata
  */

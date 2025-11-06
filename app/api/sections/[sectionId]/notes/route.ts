@@ -4,6 +4,8 @@ import { requireAuth } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import type { ReadingSectionNote, CreateReadingSectionNoteRequest } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 // POST /api/sections/[sectionId]/notes - Create a new note (any authenticated user)
 export async function POST(
     request: NextRequest,

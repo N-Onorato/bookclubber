@@ -5,6 +5,8 @@ import UserManagement from './components/UserManagement';
 import MembersManagement from './components/MembersManagement';
 import type { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
     title: 'Admin Panel | The Book Club',
     description: 'Manage cycles, members, and club settings',

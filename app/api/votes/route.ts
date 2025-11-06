@@ -3,6 +3,8 @@ import { VoteService } from '@/lib/services/voteService';
 import { PhaseService } from '@/lib/services/phaseService';
 import { getCurrentUser } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/votes - Cast a vote
  */

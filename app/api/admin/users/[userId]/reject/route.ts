@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AuthService } from '@/lib/services/authService';
 import { requireAdmin } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * DELETE /api/admin/users/[userId]/reject
  * Reject (delete) a user pending approval

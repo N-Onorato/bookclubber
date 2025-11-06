@@ -5,6 +5,8 @@ import { CycleService } from '@/lib/services/cycleServiceNew';
 import { getCurrentUser } from '@/lib/auth';
 import { getDatabase } from '@/lib/db/connection';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/votes/results?phaseId=xxx - Get voting results for a phase
  */

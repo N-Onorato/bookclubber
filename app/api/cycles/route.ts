@@ -3,6 +3,8 @@ import { CycleService } from '@/lib/services/cycleServiceNew';
 import { PhaseService } from '@/lib/services/phaseService';
 import { requireAuth, requireAdmin } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/cycles - Get all cycles with their phases
  */

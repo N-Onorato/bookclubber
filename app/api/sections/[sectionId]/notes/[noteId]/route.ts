@@ -3,6 +3,8 @@ import { getDatabase } from '@/lib/db/connection';
 import { requireAuth } from '@/lib/auth';
 import type { UpdateReadingSectionNoteRequest } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 // PATCH /api/sections/[sectionId]/notes/[noteId] - Update a note (owner or admin only)
 export async function PATCH(
     request: NextRequest,
