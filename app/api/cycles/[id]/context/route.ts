@@ -5,6 +5,8 @@ import { requireAuth } from '@/lib/auth';
 import { getDatabase } from '@/lib/db/connection';
 import { CycleContext } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/cycles/[id]/context - Get full cycle context with suggestions, votes, and computed states
  */

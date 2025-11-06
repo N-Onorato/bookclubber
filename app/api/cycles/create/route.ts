@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { CycleService } from '@/lib/services/cycleServiceNew';
 import { requireAdmin } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/cycles/create - Create a new top-level cycle (admin only)
  */

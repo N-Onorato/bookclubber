@@ -4,6 +4,8 @@ import { requireAuth } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import type { ReadingSection, ReadingSectionWithDetails, CreateReadingSectionRequest, User } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/cycles/[id]/sections - Get all sections for a cycle
 export async function GET(
     request: NextRequest,

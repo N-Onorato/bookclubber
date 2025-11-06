@@ -4,6 +4,8 @@ import { PhaseService } from '@/lib/services/phaseService';
 import { getCurrentUser } from '@/lib/auth';
 import { getDatabase } from '@/lib/db/connection';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/votes/select-winner - Admin selects winner when there's a tie
  */

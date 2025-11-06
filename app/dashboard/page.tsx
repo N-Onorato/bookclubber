@@ -3,6 +3,8 @@ import { getCurrentUser } from '@/lib/auth';
 import { LogoutButton } from './logout-button';
 import type { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
     title: 'Dashboard | The Book Club',
     description: 'Your book club dashboard - manage suggestions, voting, and reading progress',

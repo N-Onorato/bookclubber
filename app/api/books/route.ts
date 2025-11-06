@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { BookService } from '@/lib/services/bookService';
 import { requireAuth } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/books - Get all books
  */

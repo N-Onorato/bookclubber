@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { BookService } from '@/lib/services/bookService';
 import { requireAdmin } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * PATCH /api/books/[id] - Update book details (admin only)
  */
