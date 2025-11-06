@@ -103,5 +103,5 @@ slowly upward or across the peripheral background. **Speed & Style:**
 ## 7. Tone & Messaging
 
 **Voice:** Warm, inviting, slightly poetic. Example: “Welcome back, reader.”
-**Microcopy:** Avoid corporate tone. Use phrases like “Enter the Library” or
+**Microcopy:** Avoid corporate tone. Use phrases like “Welcome to the club” or
 “Cast Vote” instead of generic “Login/Submit.”

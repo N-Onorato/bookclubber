@@ -8,6 +8,9 @@ export interface User {
     password_hash: string;
     name: string;
     role: 'admin' | 'member';
+    approved: boolean;
+    approved_at?: string;
+    approved_by_user_id?: string;
     created_at: string;
     updated_at: string;
 }

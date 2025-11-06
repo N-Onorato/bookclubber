@@ -37,8 +37,8 @@ export default function RegisterPage() {
             const data = await response.json();
 
             if (response.ok) {
-                // Redirect to login
-                window.location.href = '/auth/login?message=Registration successful. Please log in.';
+                // Redirect to pending approval page
+                window.location.href = '/auth/pending-approval';
             } else {
                 setError(data.error || 'Registration failed');
             }

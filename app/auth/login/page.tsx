@@ -28,7 +28,12 @@ export default function LoginPage() {
                 // Redirect to dashboard
                 window.location.href = '/dashboard';
             } else {
-                setError(data.error || 'Login failed');
+                // Check if it's a pending approval error
+                if (data.error === 'pending_approval') {
+                    window.location.href = '/auth/pending-approval';
+                } else {
+                    setError(data.message || data.error || 'Login failed');
+                }
             }
         } catch (error) {
             setError('An error occurred. Please try again.');
@@ -48,7 +53,7 @@ export default function LoginPage() {
 
             <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
                 <h2 className="text-center text-4xl font-bold text-[#E4E4E7] mb-3 tracking-wide">
-                    Enter the Library
+                    Be in the Club
                 </h2>
                 <p className="text-center text-sm text-[#A1A1AA] font-light italic">
                     Welcome back, reader.

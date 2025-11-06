@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import CyclesManagement from './components/CyclesManagement';
+import UserManagement from './components/UserManagement';
+import MembersManagement from './components/MembersManagement';
 
 export default function AdminPage() {
     return (
@@ -23,6 +25,16 @@ export default function AdminPage() {
 
             {/* Main Content */}
             <main className="max-w-6xl mx-auto space-y-12">
+                {/* User Management Section */}
+                <section>
+                    <UserManagement />
+                </section>
+
+                {/* Members Management Section */}
+                <section>
+                    <MembersManagement />
+                </section>
+
                 {/* Cycles Management Section */}
                 <section>
                     <CyclesManagement />
@@ -30,10 +42,6 @@ export default function AdminPage() {
 
                 {/* Placeholder for future sections */}
                 {/*
-                <section>
-                    <MembersManagement />
-                </section>
-
                 <section>
                     <ClubSettings />
                 </section>

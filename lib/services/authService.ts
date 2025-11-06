@@ -32,12 +32,16 @@ export class AuthService {
             const userId = randomUUID();
             const now = new Date().toISOString();
 
+            // Admins are auto-approved, members need approval
+            const approved = role === 'admin';
+            const approved_at = approved ? now : null;
+
             const stmt = db.prepare(`
-                INSERT INTO users (id, email, password_hash, name, role, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO users (id, email, password_hash, name, role, approved, approved_at, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `);
 
-            stmt.run(userId, email, password_hash, name, role, now, now);
+            stmt.run(userId, email, password_hash, name, role, approved ? 1 : 0, approved_at, now, now);
 
             // Fetch and return created user
             const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as User;
@@ -150,5 +154,105 @@ export class AuthService {
     static async getAllUsers(): Promise<User[]> {
         const db = getDatabase();
         return db.prepare('SELECT * FROM users ORDER BY name').all() as User[];
+    }
+
+    /**
+     * Get users pending approval
+     */
+    static async getPendingUsers(): Promise<User[]> {
+        const db = getDatabase();
+        return db.prepare('SELECT * FROM users WHERE approved = FALSE ORDER BY created_at DESC').all() as User[];
+    }
+
+    /**
+     * Approve a user
+     */
+    static async approveUser(userId: string, approvedByUserId: string): Promise<boolean> {
+        try {
+            const db = getDatabase();
+            const now = new Date().toISOString();
+
+            const stmt = db.prepare(`
+                UPDATE users
+                SET approved = TRUE, approved_at = ?, approved_by_user_id = ?
+                WHERE id = ?
+            `);
+
+            const result = stmt.run(now, approvedByUserId, userId);
+            return result.changes > 0;
+        } catch (error) {
+            console.error('Error approving user:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Reject (delete) a user
+     */
+    static async rejectUser(userId: string): Promise<boolean> {
+        try {
+            const db = getDatabase();
+
+            // Delete the user (cascade will handle sessions)
+            const stmt = db.prepare('DELETE FROM users WHERE id = ? AND approved = FALSE');
+            const result = stmt.run(userId);
+
+            return result.changes > 0;
+        } catch (error) {
+            console.error('Error rejecting user:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Get all approved users (members and admins)
+     */
+    static async getApprovedUsers(): Promise<User[]> {
+        const db = getDatabase();
+        return db.prepare('SELECT * FROM users WHERE approved = TRUE ORDER BY name').all() as User[];
+    }
+
+    /**
+     * Update user role
+     */
+    static async updateUserRole(userId: string, newRole: 'admin' | 'member'): Promise<boolean> {
+        try {
+            const db = getDatabase();
+
+            const stmt = db.prepare(`
+                UPDATE users
+                SET role = ?
+                WHERE id = ?
+            `);
+
+            const result = stmt.run(newRole, userId);
+            return result.changes > 0;
+        } catch (error) {
+            console.error('Error updating user role:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Delete user (admin can delete any user except themselves)
+     */
+    static async deleteUser(userId: string, deletingUserId: string): Promise<boolean> {
+        try {
+            const db = getDatabase();
+
+            // Prevent self-deletion
+            if (userId === deletingUserId) {
+                throw new Error('Cannot delete yourself');
+            }
+
+            // Delete the user (cascade will handle sessions and related data)
+            const stmt = db.prepare('DELETE FROM users WHERE id = ?');
+            const result = stmt.run(userId);
+
+            return result.changes > 0;
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            throw error;
+        }
     }
 }

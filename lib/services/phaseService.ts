@@ -70,18 +70,20 @@ export class PhaseService {
     }
 
     /**
-     * Get active suggestion phase (based on dates only)
+     * Get active suggestion phase (based on dates and cycle status)
      */
     static async getActiveSuggestionPhase(): Promise<Phase | null> {
         const db = getDatabase();
         const now = new Date().toISOString();
 
         const phase = db.prepare(`
-            SELECT * FROM phases
-            WHERE type = 'suggestion'
-            AND starts_at <= ?
-            AND ends_at >= ?
-            ORDER BY starts_at DESC
+            SELECT p.* FROM phases p
+            INNER JOIN cycles c ON p.cycle_id = c.id
+            WHERE p.type = 'suggestion'
+            AND p.starts_at <= ?
+            AND p.ends_at >= ?
+            AND c.status = 'active'
+            ORDER BY p.starts_at DESC
             LIMIT 1
         `).get(now, now) as Phase | undefined;
 
@@ -89,18 +91,20 @@ export class PhaseService {
     }
 
     /**
-     * Get active voting phase (based on dates only)
+     * Get active voting phase (based on dates and cycle status)
      */
     static async getActiveVotingPhase(): Promise<Phase | null> {
         const db = getDatabase();
         const now = new Date().toISOString();
 
         const phase = db.prepare(`
-            SELECT * FROM phases
-            WHERE type = 'voting'
-            AND starts_at <= ?
-            AND ends_at >= ?
-            ORDER BY starts_at DESC
+            SELECT p.* FROM phases p
+            INNER JOIN cycles c ON p.cycle_id = c.id
+            WHERE p.type = 'voting'
+            AND p.starts_at <= ?
+            AND p.ends_at >= ?
+            AND c.status = 'active'
+            ORDER BY p.starts_at DESC
             LIMIT 1
         `).get(now, now) as Phase | undefined;
 
@@ -171,18 +175,20 @@ export class PhaseService {
     }
 
     /**
-     * Get active reading phase (based on dates only)
+     * Get active reading phase (based on dates and cycle status)
      */
     static async getActiveReadingPhase(): Promise<Phase | null> {
         const db = getDatabase();
         const now = new Date().toISOString();
 
         const phase = db.prepare(`
-            SELECT * FROM phases
-            WHERE type = 'reading'
-            AND starts_at <= ?
-            AND ends_at >= ?
-            ORDER BY starts_at DESC
+            SELECT p.* FROM phases p
+            INNER JOIN cycles c ON p.cycle_id = c.id
+            WHERE p.type = 'reading'
+            AND p.starts_at <= ?
+            AND p.ends_at >= ?
+            AND c.status = 'active'
+            ORDER BY p.starts_at DESC
             LIMIT 1
         `).get(now, now) as Phase | undefined;
 

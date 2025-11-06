@@ -205,8 +205,13 @@ export default function CyclesManagement() {
         }
     };
 
-    // Check if a phase is currently active based on dates
-    const isPhaseCurrentlyActive = (phase: Phase) => {
+    // Check if a phase is currently active based on dates AND parent cycle status
+    const isPhaseCurrentlyActive = (phase: Phase, cycle: CycleWithPhases) => {
+        // Phase can only be active if parent cycle is active
+        if (cycle.status !== 'active') {
+            return false;
+        }
+
         const now = new Date();
         const start = new Date(phase.starts_at);
         const end = new Date(phase.ends_at);
@@ -378,7 +383,7 @@ export default function CyclesManagement() {
                             const suggestionPhase = cycle.phases?.find((p: Phase) => p.type === 'suggestion');
                             const votingPhase = cycle.phases?.find((p: Phase) => p.type === 'voting');
                             const readingPhase = cycle.phases?.find((p: Phase) => p.type === 'reading');
-                            const hasActivePhase = cycle.phases?.some((p: Phase) => isPhaseCurrentlyActive(p));
+                            const hasActivePhase = cycle.phases?.some((p: Phase) => isPhaseCurrentlyActive(p, cycle));
 
                             return (
                                 <div
@@ -445,7 +450,7 @@ export default function CyclesManagement() {
                                             <div className="p-4 bg-[#27272A]/40 rounded-lg border border-[#27272A]">
                                                 <div className="flex items-center gap-3 mb-2">
                                                     <h5 className="text-sm font-semibold text-foreground">📚 Suggestion Phase</h5>
-                                                    {isPhaseCurrentlyActive(suggestionPhase) && (
+                                                    {isPhaseCurrentlyActive(suggestionPhase, cycle) && (
                                                         <span className="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400">
                                                             Active Now
                                                         </span>
@@ -472,7 +477,7 @@ export default function CyclesManagement() {
                                             <div className="p-4 bg-[#27272A]/40 rounded-lg border border-[#27272A]">
                                                 <div className="flex items-center gap-3 mb-2">
                                                     <h5 className="text-sm font-semibold text-foreground">🗳️ Voting Phase</h5>
-                                                    {isPhaseCurrentlyActive(votingPhase) && (
+                                                    {isPhaseCurrentlyActive(votingPhase, cycle) && (
                                                         <span className="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400">
                                                             Active Now
                                                         </span>

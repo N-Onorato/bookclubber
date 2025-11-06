@@ -3,6 +3,34 @@
 **For Claude:** When making significant changes, update this file with critical
 patterns and gotchas. Keep it under 300 lines.
 
+## Learned Patterns (from recent work)
+
+### Migration System ⚠️
+- **Location**: [migrations.yaml](migrations.yaml) - YAML-based migration definitions
+- **Tool**: `@cytoplum/numtwo` migration runner
+- **Pattern**: Never modify existing migrations, always add new versions
+- **CRITICAL**: ALWAYS run and verify new migrations with `npm run db:migrate` before considering the work complete
+  - Check the migration actually ran (look for version number in output)
+  - Verify schema changes with `sqlite3 bookclubber.db ".schema users"` (or relevant table)
+  - Test that existing functionality still works (especially auth for user-related changes)
+- **SQLite Gotchas**:
+  - Booleans stored as INTEGER (0/1), type as `boolean` in TypeScript
+  - No `DROP COLUMN`, must recreate table in `down` migrations
+  - Foreign key `ON DELETE CASCADE` works but check existing constraints
+  - WHERE clause in UPDATE might not match if DEFAULT hasn't been applied yet - use unconditional UPDATE for backfill
+
+### Admin Panel Architecture
+- **Location**: [app/dashboard/admin/](app/dashboard/admin/)
+- **Pattern**: Component-based with separate files in `components/` directory
+- **Protection**: All admin routes use `requireAdmin()` from [lib/auth.ts](lib/auth.ts)
+- **API Routes**: Admin APIs live under `/api/admin/*` namespace
+
+### Styling Patterns
+- **Base palette**: Zinc colors (`#18181B`, `#27272A`, `#3F3F46`, `#52525B`)
+- **Accents**: Purple (`#4F46E5`, `#A78BFA`, `#C4B5FD`) for primary actions
+- **Gold**: `#D4AF37` for decorative elements
+- **Pattern**: Glassmorphism with `backdrop-blur-lg` and semi-transparent backgrounds
+
 ## Critical Patterns & Gotchas
 
 ### Database Connection Pattern ⚠️
@@ -33,14 +61,25 @@ const user = db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
 - **Service**: [lib/services/bookService.ts](lib/services/bookService.ts)
 - Books auto-saved to local DB on first fetch
 
-### Authentication
+### Authentication & User Approval ⚠️
 
 - Session-based auth with HTTP-only cookies
 - bcrypt password hashing (10 rounds)
 - 30-day session expiration
+- **Admin approval required**: New users must be approved by admins before login
+  - Admins are auto-approved on creation
+  - Members default to `approved = FALSE`
+  - Login blocked for unapproved users (redirects to pending approval page)
+  - `requireAuth()` checks both authentication AND approval status
 - **Service**: [lib/services/authService.ts](lib/services/authService.ts)
+  - `createUser()` - Sets `approved` based on role
+  - `approveUser()` - Approves a pending user
+  - `rejectUser()` - Deletes a pending user
+  - `getPendingUsers()` - Gets unapproved users
 - **Helpers**: [lib/auth.ts](lib/auth.ts) - `getCurrentUser()`, `requireAuth()`,
   `requireAdmin()`
+- **Admin UI**: [app/dashboard/admin/components/UserManagement.tsx](app/dashboard/admin/components/UserManagement.tsx)
+- **APIs**: `/api/admin/users/pending`, `/api/admin/users/[userId]/approve`, `/api/admin/users/[userId]/reject`
 
 ## Key Files
 
@@ -86,10 +125,18 @@ sqlite3 bookclubber.db ".schema"
 - **Phases**: Stages within a cycle (e.g., suggestion phase, then voting phase)
 
 **Tables**:
-- `cycles` - Top-level (has `name`, `theme`, `winner_book_id`)
+- `cycles` - Top-level (has `name`, `theme`, `winner_book_id`, `status`)
 - `phases` - Linked to cycles via `cycle_id` (has `type`, `starts_at`, `ends_at`, `max_suggestions_per_user`, `max_votes_per_user`)
 - `suggestions` - Linked to phases via `phase_id`
 - `votes` - Linked to phases via `phase_id`
+
+**Cycle Status** (`active` | `completed` | `archived`):
+- Only ONE cycle can be `active` at a time
+- Creating a new cycle fails if another cycle is `active` (must mark as `completed` or `archived` first)
+- `archived` cycles are hidden from default listings (dates remain in DB)
+- Use `getAllCycles(true)` to include archived cycles
+- **IMPORTANT**: Marking a cycle as `completed` or `archived` automatically deactivates ALL its phases
+- Phase queries (`getActiveSuggestionPhase`, etc.) check BOTH date range AND parent cycle status = 'active'
 
 **Services**:
 - [lib/services/cycleService.ts](lib/services/cycleServiceNew.ts) - Manage cycles

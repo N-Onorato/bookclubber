@@ -49,9 +49,9 @@ export async function PATCH(
     try {
         await requireAdmin();
 
-        const { name, theme, winningBookId } = await request.json();
+        const { name, theme, winningBookId, status } = await request.json();
 
-        const updates: { name?: string; theme?: string; winner_book_id?: string } = {};
+        const updates: { name?: string; theme?: string; winner_book_id?: string; status?: any } = {};
 
         if (name !== undefined) {
             updates.name = name;
@@ -63,6 +63,10 @@ export async function PATCH(
 
         if (winningBookId !== undefined) {
             updates.winner_book_id = winningBookId;
+        }
+
+        if (status !== undefined) {
+            updates.status = status;
         }
 
         await CycleService.updateCycle(params.id, updates);

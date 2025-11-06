@@ -29,6 +29,14 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Check if this is a validation error (like "cycle already active")
+        if (error.message && error.message.includes('is still active')) {
+            return NextResponse.json(
+                { error: error.message },
+                { status: 400 }
+            );
+        }
+
         console.error('Error creating cycle:', error);
         return NextResponse.json(
             { error: 'Internal server error' },

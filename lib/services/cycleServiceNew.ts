@@ -13,42 +13,29 @@ export class CycleService {
     ): Promise<Cycle> {
         const db = getDatabase();
 
-        // Check if there's an active cycle with active phases
-        const now = new Date().toISOString();
-        const existingActiveWithPhases = db.prepare(`
-            SELECT c.id
-            FROM cycles c
-            INNER JOIN phases p ON c.id = p.cycle_id
-            WHERE c.status = 'active'
-            AND p.starts_at <= ?
-            AND p.ends_at >= ?
-            LIMIT 1
-        `).get(now, now) as { id: string } | undefined;
+        // Check if there's already an active cycle
+        const existingActive = db.prepare(`
+            SELECT id, name FROM cycles WHERE status = 'active' LIMIT 1
+        `).get() as { id: string; name: string } | undefined;
 
-        // If previous active cycle has no active phases, set it to completed
-        if (!existingActiveWithPhases) {
-            db.prepare(`
-                UPDATE cycles
-                SET status = 'completed', updated_at = ?
-                WHERE status = 'active'
-            `).run(now);
+        if (existingActive) {
+            const cycleName = existingActive.name || 'The current cycle';
+            throw new Error(`${cycleName} is still active. Please mark it as complete or archived before creating a new cycle.`);
         }
 
         const cycleId = randomUUID();
+        const now = new Date().toISOString();
 
-        // Determine initial status: active if no cycle has active phases, otherwise draft
-        const initialStatus = existingActiveWithPhases ? 'draft' : 'active';
-
+        // New cycles are always created as 'active'
         const stmt = db.prepare(`
             INSERT INTO cycles (id, name, theme, status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, 'active', ?, ?)
         `);
 
         stmt.run(
             cycleId,
             name || null,
             theme || null,
-            initialStatus,
             now,
             now
         );
@@ -85,11 +72,20 @@ export class CycleService {
     }
 
     /**
-     * Get all cycles
+     * Get all cycles (excludes archived by default)
      */
-    static async getAllCycles(): Promise<Cycle[]> {
+    static async getAllCycles(includeArchived: boolean = false): Promise<Cycle[]> {
         const db = getDatabase();
-        return db.prepare('SELECT * FROM cycles ORDER BY created_at DESC').all() as Cycle[];
+
+        if (includeArchived) {
+            return db.prepare('SELECT * FROM cycles ORDER BY created_at DESC').all() as Cycle[];
+        }
+
+        return db.prepare(`
+            SELECT * FROM cycles
+            WHERE status != 'archived'
+            ORDER BY created_at DESC
+        `).all() as Cycle[];
     }
 
     /**
@@ -162,6 +158,16 @@ export class CycleService {
                     throw new Error('Another cycle is already active. Please complete or archive it first.');
                 }
             }
+
+            // If setting to completed or archived, deactivate all phases in this cycle
+            if (updates.status === 'completed' || updates.status === 'archived') {
+                db.prepare(`
+                    UPDATE phases
+                    SET is_active = 0
+                    WHERE cycle_id = ?
+                `).run(cycleId);
+            }
+
             fields.push('status = ?');
             values.push(updates.status);
         }
@@ -257,7 +263,7 @@ export class CycleService {
     }
 
     /**
-     * Check if a cycle has any currently active phases (date-based)
+     * Check if a cycle has any currently active phases (date-based and cycle must be active)
      */
     static async hasActivePhases(cycleId: string): Promise<boolean> {
         const db = getDatabase();
@@ -265,10 +271,12 @@ export class CycleService {
 
         const result = db.prepare(`
             SELECT COUNT(*) as count
-            FROM phases
-            WHERE cycle_id = ?
-              AND starts_at <= ?
-              AND ends_at >= ?
+            FROM phases p
+            INNER JOIN cycles c ON p.cycle_id = c.id
+            WHERE p.cycle_id = ?
+              AND p.starts_at <= ?
+              AND p.ends_at >= ?
+              AND c.status = 'active'
         `).get(cycleId, now, now) as { count: number };
 
         return result.count > 0;

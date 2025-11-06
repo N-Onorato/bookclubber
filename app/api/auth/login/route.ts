@@ -26,6 +26,14 @@ export async function POST(request: NextRequest) {
 
         const { user, session } = result;
 
+        // Check if user is approved
+        if (!user.approved) {
+            return NextResponse.json(
+                { error: 'pending_approval', message: 'Your account is awaiting admin approval' },
+                { status: 403 }
+            );
+        }
+
         // Set HTTP-only session cookie
         const cookieStore = await cookies();
         cookieStore.set('session_id', session.id, {

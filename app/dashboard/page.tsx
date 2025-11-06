@@ -65,7 +65,7 @@ export default function DashboardPage() {
                 <div className="flex justify-between items-center">
                     <div>
                         <h1 className="text-4xl font-bold font-serif text-foreground mb-2">
-                            The Book Circle
+                            The Book Club
                         </h1>
                         <p className="text-foreground/60">
                             Welcome back, {user.name}

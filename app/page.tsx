@@ -26,7 +26,7 @@ export default function Home() {
           </div>
 
           <h1 className="text-6xl md:text-7xl font-bold text-[#E4E4E7] mb-6 tracking-wide">
-            The Book Circle
+            The Book Club
           </h1>
 
           <p className="text-lg md:text-xl text-[#A1A1AA] mb-4 max-w-2xl mx-auto font-light italic">

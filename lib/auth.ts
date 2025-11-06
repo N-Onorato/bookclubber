@@ -40,12 +40,15 @@ export async function isAdmin(): Promise<boolean> {
 }
 
 /**
- * Require authentication - throws if not authenticated
+ * Require authentication - throws if not authenticated or not approved
  */
 export async function requireAuth(): Promise<User> {
     const user = await getCurrentUser();
     if (!user) {
         throw new Error('Authentication required');
+    }
+    if (!user.approved) {
+        throw new Error('Account pending approval');
     }
     return user;
 }
