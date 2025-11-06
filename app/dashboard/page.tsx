@@ -1,59 +1,18 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getCurrentUser } from '@/lib/auth';
+import { LogoutButton } from './logout-button';
+import type { Metadata } from 'next';
 
-interface User {
-    id: string;
-    email: string;
-    name: string;
-    role: 'admin' | 'member';
-}
+export const metadata: Metadata = {
+    title: 'Dashboard | The Book Club',
+    description: 'Your book club dashboard - manage suggestions, voting, and reading progress',
+};
 
-export default function DashboardPage() {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
-    const router = useRouter();
+export default async function DashboardPage() {
+    // Server-side user fetch - no client-side auth check needed
+    const user = await getCurrentUser();
 
-    useEffect(() => {
-        checkAuth();
-    }, []);
-
-    const checkAuth = async () => {
-        try {
-            const response = await fetch('/api/auth/me');
-            if (response.ok) {
-                const data = await response.json();
-                setUser(data.user);
-            } else {
-                router.push('/auth/login');
-            }
-        } catch (error) {
-            console.error('Auth check failed:', error);
-            router.push('/auth/login');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleLogout = async () => {
-        try {
-            await fetch('/api/auth/logout', { method: 'POST' });
-            router.push('/');
-        } catch (error) {
-            console.error('Logout failed:', error);
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-foreground">Loading...</div>
-            </div>
-        );
-    }
-
+    // This should never happen due to layout.tsx requireAuth(), but TypeScript needs it
     if (!user) {
         return null;
     }
@@ -71,12 +30,7 @@ export default function DashboardPage() {
                             Welcome back, {user.name}
                         </p>
                     </div>
-                    <button
-                        onClick={handleLogout}
-                        className="px-4 py-2 bg-[#18181B]/60 backdrop-blur-lg rounded-full border border-[#27272A] text-foreground hover:border-accent transition-colors"
-                    >
-                        Logout
-                    </button>
+                    <LogoutButton />
                 </div>
             </header>
 
