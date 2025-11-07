@@ -6,34 +6,12 @@ import WinnerCard from './WinnerCard';
 import TieCard from './TieCard';
 import ResultsList from './ResultsList';
 import LoadingSkeleton from './LoadingSkeleton';
-
-interface Book {
-    id: string;
-    title: string;
-    author: string;
-    cover_url?: string;
-    local_cover_path?: string;
-    description?: string;
-    page_count?: number;
-}
+import { Book, User, Phase } from '@/lib/types';
 
 interface VoteCount {
     bookId: string;
     count: number;
     book: Book;
-}
-
-interface Phase {
-    id: string;
-    theme?: string;
-    cycle_id: string;
-}
-
-interface User {
-    id: string;
-    role: 'admin' | 'member';
-    name: string;
-    email: string;
 }
 
 interface VotingResultsProps {
