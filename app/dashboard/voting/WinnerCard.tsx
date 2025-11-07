@@ -1,14 +1,5 @@
 import BacklitCard from '@/components/BacklitCard';
-
-interface Book {
-    id: string;
-    title: string;
-    author: string;
-    cover_url?: string;
-    local_cover_path?: string;
-    description?: string;
-    page_count?: number;
-}
+import { Book } from '@/lib/types';
 
 interface WinnerCardProps {
     book: Book;

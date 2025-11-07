@@ -4,21 +4,11 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import VotingCard from './VotingCard';
 import VotingResults from './VotingResults';
-import { Vote } from '@/lib/types';
-
-interface BookWithVotes {
-    id: string;
-    title: string;
-    author: string;
-    cover_url?: string;
-    local_cover_path?: string;
-    description?: string;
-    page_count?: number;
-}
+import { Vote, Book } from '@/lib/types';
 
 export default function VotingPage() {
     const [cycleContext, setCycleContext] = useState<any>(null);
-    const [books, setBooks] = useState<BookWithVotes[]>([]);
+    const [books, setBooks] = useState<Book[]>([]);
     const [userVotes, setUserVotes] = useState<Vote[]>([]);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -112,7 +102,7 @@ export default function VotingPage() {
                             }
                         ])
                     ).values()
-                ) as BookWithVotes[];
+                ) as Book[];
                 setBooks(uniqueBooks);
             }
 

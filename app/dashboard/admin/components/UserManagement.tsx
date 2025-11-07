@@ -1,14 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { User } from '@/lib/types';
 
-interface PendingUser {
-    id: string;
-    email: string;
-    name: string;
-    role: string;
-    created_at: string;
-}
+type PendingUser = Pick<User, 'id' | 'email' | 'name' | 'role' | 'created_at'>;
 
 export default function UserManagement() {
     const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);

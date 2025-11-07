@@ -1,21 +1,5 @@
 import BacklitCard from '@/components/BacklitCard';
-
-interface Book {
-    id: string;
-    title: string;
-    author: string;
-    cover_url?: string;
-    local_cover_path?: string;
-    description?: string;
-    page_count?: number;
-}
-
-interface User {
-    id: string;
-    role: 'admin' | 'member';
-    name: string;
-    email: string;
-}
+import { Book, User } from '@/lib/types';
 
 interface TieCardProps {
     book: Book;
