@@ -103,7 +103,7 @@ export async function GET(
         }
 
         const context: CycleContext = {
-            ...cycleWithPhases,
+            cycle: cycleWithPhases,
             currentPhase,
             pastPhases,
             futurePhases,

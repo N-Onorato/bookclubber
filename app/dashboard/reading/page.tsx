@@ -75,6 +75,10 @@ export default function ReadingPage() {
     };
 
     const handleDeleteSection = async (sectionId: string) => {
+        if (!cycleContext?.cycle?.id) {
+            return;
+        }
+
         if (!confirm('Are you sure you want to delete this section? All notes will be deleted.')) {
             return;
         }

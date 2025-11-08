@@ -244,7 +244,8 @@ export interface ReadingSectionNoteWithUser extends ReadingSectionNote {
 }
 
 // Cycle context with computed states for UI
-export interface CycleContext extends CycleWithPhases {
+export interface CycleContext {
+    cycle: CycleWithPhases;
     currentPhase?: Phase;
     pastPhases: Phase[];
     futurePhases: Phase[];
