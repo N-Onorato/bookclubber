@@ -40,7 +40,7 @@ export default function SuggestionCard({ suggestion, canDelete, onDelete, canEdi
                                 {suggestion.title || 'Untitled'}
                             </h3>
                             <p className="text-foreground/70 text-lg mb-1">by {suggestion.author || 'Unknown Author'}</p>
-                            {suggestion.page_count && (
+                            {suggestion.page_count && suggestion.page_count > 0 && (
                                 <p className="text-foreground/50 text-sm">
                                     {suggestion.page_count} pages
                                 </p>

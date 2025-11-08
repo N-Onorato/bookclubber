@@ -42,7 +42,23 @@ export async function POST(request: NextRequest) {
         await requireAuth();
 
         const body = await request.json();
-        const { openLibraryId, title, author, isbn, description, pageCount, publishYear, coverImageUrl, coverImagePath } = body;
+        const {
+            openLibraryId,
+            googleBooksId,
+            title,
+            author,
+            isbn,
+            isbn10,
+            isbn13,
+            description,
+            pageCount,
+            publishYear,
+            coverImageUrl,
+            coverImagePath,
+            publisher,
+            language,
+            categories
+        } = body;
 
         // Mode 1: Create from Open Library
         if (openLibraryId) {
@@ -67,15 +83,67 @@ export async function POST(request: NextRequest) {
             }
 
             // Create book in database with source tracking
-            // Use cover URL from search results if available, otherwise use the one from work data
+            // Use metadata from request body if available (from search results), otherwise from Open Library
             const book = await BookService.createOrUpdateBook({
                 source: 'openlibrary',
                 sourceId: bookData.openLibraryId,
                 title: bookData.title,
                 author: bookData.author,
                 coverImageUrl: coverImageUrl || bookData.coverImageUrl,
-                description: bookData.description,
-                publishYear: bookData.publishYear
+                description: description || bookData.description,
+                publishYear: publishYear || bookData.publishYear,
+                pageCount: pageCount,
+                isbn: isbn,
+                isbn10: isbn10,
+                isbn13: isbn13,
+                publisher: publisher,
+                language: language,
+                categories: categories,
+                googleBooksId: googleBooksId
+            });
+
+            return NextResponse.json({
+                success: true,
+                book
+            }, { status: 201 });
+        }
+
+        // Mode 1b: Create from Google Books only (no Open Library match)
+        if (googleBooksId && !openLibraryId) {
+            // Check if book already exists by Google Books ID
+            const existingBook = await BookService.getBookBySource('google', googleBooksId);
+            if (existingBook) {
+                return NextResponse.json({
+                    success: true,
+                    book: existingBook,
+                    message: 'Book already exists'
+                });
+            }
+
+            // Create book using Google Books data from search results
+            if (!title || !author) {
+                return NextResponse.json(
+                    { error: 'Title and author are required' },
+                    { status: 400 }
+                );
+            }
+
+            const book = await BookService.createOrUpdateBook({
+                source: 'google',
+                sourceId: googleBooksId,
+                title,
+                author,
+                coverImageUrl,
+                description,
+                publishYear,
+                pageCount,
+                isbn,
+                isbn10,
+                isbn13,
+                publisher,
+                language,
+                categories,
+                googleBooksId
             });
 
             return NextResponse.json({

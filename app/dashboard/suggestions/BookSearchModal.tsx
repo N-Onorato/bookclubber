@@ -77,7 +77,19 @@ export default function BookSearchModal({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     openLibraryId: selectedBook.openLibraryId,
-                    coverImageUrl: selectedBook.coverImageUrl
+                    googleBooksId: selectedBook.googleBooksId,
+                    title: selectedBook.title,
+                    author: selectedBook.author,
+                    coverImageUrl: selectedBook.coverImageUrl,
+                    pageCount: selectedBook.pageCount,
+                    description: selectedBook.description,
+                    publishYear: selectedBook.publishYear,
+                    isbn: selectedBook.isbn,
+                    isbn10: selectedBook.isbn10,
+                    isbn13: selectedBook.isbn13,
+                    publisher: selectedBook.publisher,
+                    language: selectedBook.language,
+                    categories: selectedBook.categories
                 })
             });
 
@@ -511,7 +523,7 @@ export default function BookSearchModal({
                                     {selectedBook.publishYear && (
                                         <p>Published: {selectedBook.publishYear}</p>
                                     )}
-                                    {selectedBook.pageCount && (
+                                    {selectedBook.pageCount && selectedBook.pageCount > 0 && (
                                         <p>Pages: {selectedBook.pageCount}</p>
                                     )}
                                     {selectedBook.publisher && (
