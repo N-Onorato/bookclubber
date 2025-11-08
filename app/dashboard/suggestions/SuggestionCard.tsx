@@ -45,6 +45,24 @@ export default function SuggestionCard({ suggestion, canDelete, onDelete, canEdi
                                     {suggestion.page_count} pages
                                 </p>
                             )}
+                            {suggestion.categories && typeof suggestion.categories === 'string' && (() => {
+                                try {
+                                    const cats = JSON.parse(suggestion.categories);
+                                    if (cats && cats.length > 0) {
+                                        return (
+                                            <div className="flex gap-1 mt-2 flex-wrap">
+                                                {cats.slice(0, 3).map((category: string, i: number) => (
+                                                    <span key={i} className="text-xs px-2 py-1 bg-accent/10 text-accent/70 rounded-full">
+                                                        {category}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        );
+                                    }
+                                } catch {
+                                    return null;
+                                }
+                            })()}
                         </div>
                         <div className="flex gap-2 flex-wrap sm:flex-nowrap">
                             {canEdit && onEdit && (

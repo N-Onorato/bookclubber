@@ -221,6 +221,11 @@ export interface SuggestionWithDetails extends Suggestion {
     cover_image_url?: string;
     description?: string;
     page_count?: number;
+    publisher?: string;
+    language?: string;
+    categories?: string; // JSON string
+    isbn_10?: string;
+    isbn_13?: string;
     reason?: string;
     suggested_by?: string;
 }
@@ -321,13 +326,20 @@ export interface BookSearchResult {
 
 // UI-specific search result type for book search modals
 export interface SearchResult {
-    openLibraryId: string;
+    openLibraryId?: string;
+    googleBooksId?: string;
     title: string;
     author: string;
     coverImageUrl?: string;
     description?: string;
     publishYear?: number;
     pageCount?: number;
+    publisher?: string;
+    language?: string;
+    categories?: string[];
+    isbn?: string;
+    isbn10?: string;
+    isbn13?: string;
 }
 
 // ============================================================================

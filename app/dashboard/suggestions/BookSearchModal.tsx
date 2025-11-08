@@ -321,11 +321,28 @@ export default function BookSearchModal({
                                                     className="w-16 h-24 object-cover"
                                                 />
                                             )}
-                                            <div>
+                                            <div className="flex-1">
                                                 <h3 className="text-foreground font-medium">{book.title}</h3>
                                                 <p className="text-foreground/60 text-sm">{book.author}</p>
-                                                {book.publishYear && (
-                                                    <p className="text-foreground/40 text-xs mt-1">{book.publishYear}</p>
+                                                <div className="flex flex-wrap gap-2 mt-2 text-xs">
+                                                    {book.publishYear && (
+                                                        <span className="text-foreground/40">{book.publishYear}</span>
+                                                    )}
+                                                    {book.pageCount && (
+                                                        <span className="text-foreground/40">• {book.pageCount} pages</span>
+                                                    )}
+                                                    {book.publisher && (
+                                                        <span className="text-foreground/40">• {book.publisher}</span>
+                                                    )}
+                                                </div>
+                                                {book.categories && book.categories.length > 0 && (
+                                                    <div className="flex gap-1 mt-2 flex-wrap">
+                                                        {book.categories.slice(0, 3).map((category: string, i: number) => (
+                                                            <span key={i} className="text-xs px-2 py-0.5 bg-accent/10 text-accent/80 rounded-full">
+                                                                {category}
+                                                            </span>
+                                                        ))}
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -484,13 +501,32 @@ export default function BookSearchModal({
                                     className="w-32 h-48 object-cover"
                                 />
                             )}
-                            <div>
+                            <div className="flex-1">
                                 <h3 className="text-xl font-serif font-semibold text-foreground mb-1">
                                     {selectedBook.title}
                                 </h3>
-                                <p className="text-foreground/70">by {selectedBook.author}</p>
-                                {selectedBook.publishYear && (
-                                    <p className="text-foreground/50 text-sm mt-1">{selectedBook.publishYear}</p>
+                                <p className="text-foreground/70 mb-2">by {selectedBook.author}</p>
+
+                                <div className="space-y-1 text-sm text-foreground/60">
+                                    {selectedBook.publishYear && (
+                                        <p>Published: {selectedBook.publishYear}</p>
+                                    )}
+                                    {selectedBook.pageCount && (
+                                        <p>Pages: {selectedBook.pageCount}</p>
+                                    )}
+                                    {selectedBook.publisher && (
+                                        <p>Publisher: {selectedBook.publisher}</p>
+                                    )}
+                                </div>
+
+                                {selectedBook.categories && selectedBook.categories.length > 0 && (
+                                    <div className="flex gap-1 mt-3 flex-wrap">
+                                        {selectedBook.categories.slice(0, 4).map((category: string, i: number) => (
+                                            <span key={i} className="text-xs px-2 py-1 bg-accent/10 text-accent/80 rounded-full">
+                                                {category}
+                                            </span>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
                         </div>
