@@ -5,16 +5,42 @@ import Link from 'next/link';
 import SuggestionCard from './SuggestionCard';
 import BookSearchModal from './BookSearchModal';
 import EditBookModal from './EditBookModal';
-import { SuggestionWithDetails } from '@/lib/types';
+import { SuggestionWithDetails, CycleContext, User, Phase } from '@/lib/types';
+
+/**
+ * Calculate time until phase starts and return a human-readable message
+ */
+const getPhaseCountdownMessage = (phase: Phase): string => {
+    const now = new Date();
+    const starts = new Date(phase.starts_at);
+
+    if (starts <= now) {
+        return '📚 Suggestions Closed';
+    }
+
+    const timeDiff = starts.getTime() - now.getTime();
+    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+    const minutes = Math.floor(timeDiff / (1000 * 60));
+
+    if (days > 0) {
+        return `📚 Suggestions open in ${days} day${days !== 1 ? 's' : ''}`;
+    } else if (hours > 0) {
+        return `📚 Suggestions open in ${hours} hour${hours !== 1 ? 's' : ''}`;
+    } else {
+        return `📚 Suggestions open in ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+    }
+};
 
 export default function SuggestionsPage() {
-    const [cycleContext, setCycleContext] = useState<any>(null);
+    const [cycleContext, setCycleContext] = useState<CycleContext | null>(null);
     const [suggestions, setSuggestions] = useState<SuggestionWithDetails[]>([]);
     const [showSearchModal, setShowSearchModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingSuggestion, setEditingSuggestion] = useState<SuggestionWithDetails | null>(null);
     const [loading, setLoading] = useState(true);
-    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         loadActiveCycle();
@@ -41,13 +67,18 @@ export default function SuggestionsPage() {
 
     const loadActiveCycle = async () => {
         try {
+            setError(null);
             const response = await fetch('/api/cycles/active');
             if (response.ok) {
                 const data = await response.json();
                 setCycleContext(data);
+            } else {
+                const data = await response.json();
+                setError(data.error || 'Failed to load active cycle');
             }
-        } catch (error) {
-            console.error('Error loading active cycle:', error);
+        } catch (err) {
+            console.error('Error loading active cycle:', err);
+            setError(err instanceof Error ? err.message : 'Failed to load active cycle');
         } finally {
             setLoading(false);
         }
@@ -61,9 +92,12 @@ export default function SuggestionsPage() {
             if (response.ok) {
                 const data = await response.json();
                 setSuggestions(data.suggestions);
+            } else {
+                const data = await response.json();
+                console.error('Error loading suggestions:', data.error);
             }
-        } catch (error) {
-            console.error('Error loading suggestions:', error);
+        } catch (err) {
+            console.error('Error loading suggestions:', err);
         }
     };
 
@@ -141,6 +175,32 @@ export default function SuggestionsPage() {
         );
     }
 
+    if (error) {
+        return (
+            <div className="min-h-screen p-8">
+                <div className="max-w-6xl mx-auto">
+                    <Link href="/dashboard" className="text-accent hover:underline text-sm mb-4 block">
+                        ← Back to Dashboard
+                    </Link>
+                    <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-xl">
+                        <h2 className="text-xl font-semibold text-red-400 mb-2">Error Loading Page</h2>
+                        <p className="text-foreground/70 mb-4">{error}</p>
+                        <button
+                            onClick={() => {
+                                setError(null);
+                                setLoading(true);
+                                loadActiveCycle();
+                            }}
+                            className="px-4 py-2 bg-accent/20 border border-accent rounded-lg text-foreground hover:bg-accent/30 transition-colors"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (!cycleContext) {
         return (
             <div className="min-h-screen p-8">
@@ -171,26 +231,7 @@ export default function SuggestionsPage() {
                         </h1>
                         <p className="text-foreground/60">
                             {cycleContext.isSuggestionOpen && '📚 Suggestion Phase Open'}
-                            {!cycleContext.isSuggestionOpen && cycleContext.suggestionPhase && (() => {
-                                const now = new Date();
-                                const starts = new Date(cycleContext.suggestionPhase.starts_at);
-                                if (starts > now) {
-                                    // Future phase
-                                    const days = Math.floor((starts.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                                    const hours = Math.floor((starts.getTime() - now.getTime()) / (1000 * 60 * 60));
-                                    if (days > 0) {
-                                        return `📚 Suggestions open in ${days} day${days !== 1 ? 's' : ''}`;
-                                    } else if (hours > 0) {
-                                        return `📚 Suggestions open in ${hours} hour${hours !== 1 ? 's' : ''}`;
-                                    } else {
-                                        const minutes = Math.floor((starts.getTime() - now.getTime()) / (1000 * 60));
-                                        return `📚 Suggestions open in ${minutes} minute${minutes !== 1 ? 's' : ''}`;
-                                    }
-                                } else {
-                                    // Past phase
-                                    return '📚 Suggestions Closed';
-                                }
-                            })()}
+                            {!cycleContext.isSuggestionOpen && cycleContext.suggestionPhase && getPhaseCountdownMessage(cycleContext.suggestionPhase)}
                             {cycleContext.cycle?.theme && ` - ${cycleContext.cycle.theme}`}
                         </p>
                         {cycleContext.suggestionPhase && (
