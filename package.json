@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "tsx scripts/start.ts",
+    "start:basic": "next start",
     "lint": "next lint",
     "db:migrate": "numtwo-migrate",
     "db:migrate:status": "numtwo-migrate status",
@@ -21,7 +22,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@cytoplum/numtwo": "^0.1.1",
+    "@cytoplum/numtwo": "^0.1.2",
     "@tailwindcss/postcss": "^4.1.13",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.5.2",

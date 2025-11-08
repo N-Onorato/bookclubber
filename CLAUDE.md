@@ -9,7 +9,14 @@ patterns and gotchas. Keep it under 300 lines.
 
 - **Location**: [migrations.yaml](migrations.yaml) - YAML-based migration
   definitions
-- **Tool**: `@cytoplum/numtwo` migration runner
+- **Tool**: `@cytoplum/numtwo@0.1.2` migration runner
+- **File References**: Large migration SQL is stored in [migrations/](migrations/) directory
+  - Use `file: "migrations/xxx.sql"` syntax in migrations.yaml
+  - Keeps migrations.yaml clean and readable
+  - All referenced SQL files are validated at migration load time
+- **Current State**: Single consolidated migration (v1) represents complete schema
+  - Replaces previous 9 incremental migrations
+  - Fresh databases get full schema in one migration
 - **Pattern**: Never modify existing migrations, always add new versions
 - **CRITICAL**: ALWAYS run and verify new migrations with `npm run db:migrate`
   before considering the work complete
@@ -20,6 +27,7 @@ patterns and gotchas. Keep it under 300 lines.
     user-related changes)
 - **SQLite Gotchas**:
   - Booleans stored as INTEGER (0/1), type as `boolean` in TypeScript
+    - CRITICAL: When inserting, use 0/1 not true/false (SQLite3 can only bind numbers, strings, bigints, buffers, and null)
   - No `DROP COLUMN`, must recreate table in `down` migrations
   - Foreign key `ON DELETE CASCADE` works but check existing constraints
   - WHERE clause in UPDATE might not match if DEFAULT hasn't been applied yet -
@@ -120,6 +128,11 @@ npm run db:migrate   # Run migrations only
 # Development
 npm run dev          # Start dev server
 npm run build        # Build for production
+npm run start        # Start production server with data management
+npm run start:basic  # Start production server (Next.js default, no data management)
+
+# Data Reset (useful for fresh start)
+RESET_DATA=true npm run start  # Deletes data directory and reinitializes DB
 
 # SQLite inspection
 sqlite3 bookclubber.db ".tables"

@@ -48,9 +48,9 @@ try {
         const adminPassword = bcrypt.hashSync("admin123", 10);
 
         db.prepare(`
-            INSERT INTO users (id, email, password_hash, name, role)
-            VALUES (?, ?, ?, ?, ?)
-        `).run(adminId, "admin@bookclub.com", adminPassword, "Admin User", "admin");
+            INSERT INTO users (id, email, password_hash, name, role, approved, approved_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(adminId, "admin@bookclub.com", adminPassword, "Admin User", "admin", 1, new Date().toISOString());
 
         console.log("✓ Created default admin user");
         console.log("  Email: admin@bookclub.com");
