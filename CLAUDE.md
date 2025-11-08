@@ -6,30 +6,40 @@ patterns and gotchas. Keep it under 300 lines.
 ## Learned Patterns (from recent work)
 
 ### Migration System ⚠️
-- **Location**: [migrations.yaml](migrations.yaml) - YAML-based migration definitions
+
+- **Location**: [migrations.yaml](migrations.yaml) - YAML-based migration
+  definitions
 - **Tool**: `@cytoplum/numtwo` migration runner
 - **Pattern**: Never modify existing migrations, always add new versions
-- **CRITICAL**: ALWAYS run and verify new migrations with `npm run db:migrate` before considering the work complete
+- **CRITICAL**: ALWAYS run and verify new migrations with `npm run db:migrate`
+  before considering the work complete
   - Check the migration actually ran (look for version number in output)
-  - Verify schema changes with `sqlite3 bookclubber.db ".schema users"` (or relevant table)
-  - Test that existing functionality still works (especially auth for user-related changes)
+  - Verify schema changes with `sqlite3 bookclubber.db ".schema users"` (or
+    relevant table)
+  - Test that existing functionality still works (especially auth for
+    user-related changes)
 - **SQLite Gotchas**:
   - Booleans stored as INTEGER (0/1), type as `boolean` in TypeScript
   - No `DROP COLUMN`, must recreate table in `down` migrations
   - Foreign key `ON DELETE CASCADE` works but check existing constraints
-  - WHERE clause in UPDATE might not match if DEFAULT hasn't been applied yet - use unconditional UPDATE for backfill
+  - WHERE clause in UPDATE might not match if DEFAULT hasn't been applied yet -
+    use unconditional UPDATE for backfill
 
 ### Admin Panel Architecture
+
 - **Location**: [app/dashboard/admin/](app/dashboard/admin/)
 - **Pattern**: Component-based with separate files in `components/` directory
-- **Protection**: All admin routes use `requireAdmin()` from [lib/auth.ts](lib/auth.ts)
+- **Protection**: All admin routes use `requireAdmin()` from
+  [lib/auth.ts](lib/auth.ts)
 - **API Routes**: Admin APIs live under `/api/admin/*` namespace
 
 ### Styling Patterns
+
 - **Base palette**: Zinc colors (`#18181B`, `#27272A`, `#3F3F46`, `#52525B`)
 - **Accents**: Purple (`#4F46E5`, `#A78BFA`, `#C4B5FD`) for primary actions
 - **Gold**: `#D4AF37` for decorative elements
-- **Pattern**: Glassmorphism with `backdrop-blur-lg` and semi-transparent backgrounds
+- **Pattern**: Glassmorphism with `backdrop-blur-lg` and semi-transparent
+  backgrounds
 
 ## Critical Patterns & Gotchas
 
@@ -78,14 +88,15 @@ const user = db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
   - `getPendingUsers()` - Gets unapproved users
 - **Helpers**: [lib/auth.ts](lib/auth.ts) - `getCurrentUser()`, `requireAuth()`,
   `requireAdmin()`
-- **Admin UI**: [app/dashboard/admin/components/UserManagement.tsx](app/dashboard/admin/components/UserManagement.tsx)
-- **APIs**: `/api/admin/users/pending`, `/api/admin/users/[userId]/approve`, `/api/admin/users/[userId]/reject`
+- **Admin UI**:
+  [app/dashboard/admin/components/UserManagement.tsx](app/dashboard/admin/components/UserManagement.tsx)
+- **APIs**: `/api/admin/users/pending`, `/api/admin/users/[userId]/approve`,
+  `/api/admin/users/[userId]/reject`
 
 ## Key Files
 
 - [lib/db/connection.ts](lib/db/connection.ts) - Database connection (use
   `getDatabase()`)
-- [lib/db/schema.sql](lib/db/schema.sql) - Schema reference
 - [lib/types.ts](lib/types.ts) - TypeScript definitions
 - [migrations.yaml](migrations.yaml) - Migration definitions
 - [lib/services/*](lib/services/) - Business logic layer
@@ -121,30 +132,40 @@ sqlite3 bookclubber.db ".schema"
 
 **IMPORTANT**: The system uses a two-level hierarchy:
 
-- **Cycles**: Top-level entities representing a complete book selection process (e.g., "Spring 2024 Cycle")
+- **Cycles**: Top-level entities representing a complete book selection process
+  (e.g., "Spring 2024 Cycle")
 - **Phases**: Stages within a cycle (e.g., suggestion phase, then voting phase)
 
 **Tables**:
+
 - `cycles` - Top-level (has `name`, `theme`, `winner_book_id`, `status`)
-- `phases` - Linked to cycles via `cycle_id` (has `type`, `starts_at`, `ends_at`, `max_suggestions_per_user`, `max_votes_per_user`)
+- `phases` - Linked to cycles via `cycle_id` (has `type`, `starts_at`,
+  `ends_at`, `max_suggestions_per_user`, `max_votes_per_user`)
 - `suggestions` - Linked to phases via `phase_id`
 - `votes` - Linked to phases via `phase_id`
 
 **Cycle Status** (`active` | `completed` | `archived`):
+
 - Only ONE cycle can be `active` at a time
-- Creating a new cycle fails if another cycle is `active` (must mark as `completed` or `archived` first)
+- Creating a new cycle fails if another cycle is `active` (must mark as
+  `completed` or `archived` first)
 - `archived` cycles are hidden from default listings (dates remain in DB)
 - Use `getAllCycles(true)` to include archived cycles
-- **IMPORTANT**: Marking a cycle as `completed` or `archived` automatically deactivates ALL its phases
-- Phase queries (`getActiveSuggestionPhase`, etc.) check BOTH date range AND parent cycle status = 'active'
+- **IMPORTANT**: Marking a cycle as `completed` or `archived` automatically
+  deactivates ALL its phases
+- Phase queries (`getActiveSuggestionPhase`, etc.) check BOTH date range AND
+  parent cycle status = 'active'
 
 **Services**:
-- [lib/services/cycleService.ts](lib/services/cycleServiceNew.ts) - Manage cycles
-- [lib/services/phaseService.ts](lib/services/phaseService.ts) - Manage phases
-- Use `PhaseService.getSuggestionPhaseForVoting()` to link voting phase to its suggestions
 
-**Core Tables**: users (UUID PKs), sessions, books (with `local_cover_path`), cycles, phases,
-suggestions, votes, reading_chunks, meetings
+- [lib/services/cycleService.ts](lib/services/cycleServiceNew.ts) - Manage
+  cycles
+- [lib/services/phaseService.ts](lib/services/phaseService.ts) - Manage phases
+- Use `PhaseService.getSuggestionPhaseForVoting()` to link voting phase to its
+  suggestions
+
+**Core Tables**: users (UUID PKs), sessions, books (with `local_cover_path`),
+cycles, phases, suggestions, votes, reading_chunks, meetings
 
 **Feature**: blocked_authors, themes, rankings (Phase 2)
 

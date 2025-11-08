@@ -170,7 +170,6 @@ bookclubber/
 │   ├── db/                     # Database configuration
 │   │   ├── connection.ts       # Database connection & service
 │   │   ├── init.ts            # Database initialization
-│   │   └── schema.sql         # Database schema (reference)
 │   ├── services/              # Business logic services
 │   │   └── authService.ts     # Authentication service
 │   └── types.ts               # TypeScript type definitions
@@ -225,8 +224,6 @@ The application uses SQLite with a comprehensive schema including:
 
 - `audit_log` - Audit trail for admin actions
 - `events` - Event queue for future notifications
-
-See [lib/db/schema.sql](lib/db/schema.sql) for complete schema definition.
 
 ## 👥 User Roles & Permissions
 
