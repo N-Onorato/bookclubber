@@ -5,7 +5,7 @@ import { requireAuth } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/books/search?q=query - Search for books using Open Library
+ * GET /api/books/search?q=query - Search for books using Open Library + Google Books fallback
  */
 export async function GET(request: NextRequest) {
     try {
@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        const books = await BookService.searchBooks(query, limit);
+        // Use unified search which tries Open Library first, then Google Books as fallback
+        const books = await BookService.searchBooksUnified(query, limit);
 
         return NextResponse.json({ books });
     } catch (error: any) {

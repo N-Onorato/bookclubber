@@ -41,6 +41,25 @@ patterns and gotchas. Keep it under 300 lines.
 - **Pattern**: Glassmorphism with `backdrop-blur-lg` and semi-transparent
   backgrounds
 
+### Google Books Integration ⚠️
+
+- **Location**: [lib/services/googleBooksService.ts](lib/services/googleBooksService.ts)
+- **Fallback Strategy**: Open Library first, Google Books if <3 results
+- **API Endpoint**: `/api/books/search` uses `searchBooksUnified()` for automatic fallback
+- **Environment Variables**:
+  - `GOOGLE_API_KEY` - Enables Google Books API integration
+  - `ENABLE_DEBUG_FEATURES` - Shows debug console at `/dashboard/debug`
+- **Debug Console**:
+  - Path: `/dashboard/debug` (only visible if `ENABLE_DEBUG_FEATURES=true`)
+  - Test searches from both Open Library and Google Books
+  - View raw API responses and timing data
+  - Test ISBN searches and unified fallback logic
+- **Book Fields**: Added `publisher`, `language`, `categories`, `isbn_10`, `isbn_13`, `google_books_id`
+- **Methods**:
+  - `BookService.searchBooksUnified()` - Use this for all searches (has fallback)
+  - `BookService.enrichBookFromGoogle()` - Enrich existing book with Google data
+  - `BookService.validateBook()` - Validate book metadata (best effort)
+
 ## Critical Patterns & Gotchas
 
 ### Database Connection Pattern ⚠️

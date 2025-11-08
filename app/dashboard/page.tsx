@@ -117,6 +117,27 @@ export default async function DashboardPage() {
                             View Progress →
                         </div>
                     </Link>
+
+                    {/* Debug Console (only shown if ENABLE_DEBUG_FEATURES is true) */}
+                    {process.env.ENABLE_DEBUG_FEATURES === 'true' && (
+                        <Link
+                            href="/dashboard/debug"
+                            className="block p-6 bg-[#18181B]/60 backdrop-blur-lg rounded-2xl border border-yellow-700/50 hover:border-yellow-500 transition-all group"
+                        >
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="text-3xl">🔧</div>
+                                <h2 className="text-2xl font-serif font-semibold text-foreground">
+                                    Debug Console
+                                </h2>
+                            </div>
+                            <p className="text-foreground/70">
+                                Test book search APIs and view integration diagnostics.
+                            </p>
+                            <div className="mt-4 text-yellow-500 group-hover:translate-x-1 transition-transform inline-block">
+                                Open Debug Console →
+                            </div>
+                        </Link>
+                    )}
                 </div>
             </div>
 
