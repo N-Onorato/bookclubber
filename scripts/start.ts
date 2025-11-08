@@ -19,8 +19,24 @@ if (RESET_DATA) {
     console.log("⚠️  RESET_DATA is set - Removing all data...");
 
     if (fs.existsSync(DATA_DIR)) {
-        fs.rmSync(DATA_DIR, { recursive: true, force: true });
-        console.log("✓ Removed data directory:", DATA_DIR);
+        // Remove contents of data directory instead of the directory itself
+        // (directory may be a mounted volume in production)
+        const entries = fs.readdirSync(DATA_DIR);
+        for (const entry of entries) {
+            const fullPath = path.join(DATA_DIR, entry);
+            try {
+                const stat = fs.statSync(fullPath);
+                if (stat.isDirectory()) {
+                    fs.rmSync(fullPath, { recursive: true, force: true });
+                } else {
+                    fs.unlinkSync(fullPath);
+                }
+                console.log("✓ Removed:", entry);
+            } catch (error) {
+                console.warn(`Warning: Could not remove ${entry}:`, error);
+            }
+        }
+        console.log("✓ Cleared data directory:", DATA_DIR);
     }
 
     console.log("✓ Data reset complete");
