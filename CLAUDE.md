@@ -44,15 +44,20 @@ patterns and gotchas. Keep it under 300 lines.
 ### Google Books Integration ⚠️
 
 - **Location**: [lib/services/googleBooksService.ts](lib/services/googleBooksService.ts)
+- **Language Filtering**: Both APIs restricted to English language books
+  - Open Library: Adds `language:eng` to query
+  - Google Books: Uses `langRestrict=en` parameter
 - **Enrichment Strategy**: Open Library first, then enriched with Google Books data
   - Fetches from both APIs when Google Books is enabled
-  - Matches books using fuzzy title + author matching
+  - Uses `fields` parameter to request ISBNs from Open Library
+  - Matches books using ISBN first, then fuzzy title + author matching
   - Enriches Open Library results with Google Books metadata (descriptions, page counts, publishers, etc.)
   - Adds non-matching Google Books results as additional options
-- **Matching Logic**: Uses fuzzy matching (case-insensitive, punctuation-removed)
-  - Title matching: Handles subtitles and variations ("Dune" matches "Dune: A Novel")
-  - Author matching: Handles "Frank Herbert" vs "Herbert, Frank" formats
-  - No ISBN matching in search (Open Library search API doesn't return ISBNs reliably)
+- **Matching Logic**: Two-tier priority system
+  - **Priority 1**: ISBN matching (ISBN-13 or ISBN-10)
+  - **Priority 2**: Fuzzy title + author matching (case-insensitive, punctuation-removed)
+    - Title matching: Handles subtitles and variations ("Dune" matches "Dune: A Novel")
+    - Author matching: Handles "Frank Herbert" vs "Herbert, Frank" formats
 - **API Endpoint**: `/api/books/search` uses `searchBooksUnified()` for automatic enrichment
 - **Environment Variables**:
   - `GOOGLE_API_KEY` - Enables Google Books API integration

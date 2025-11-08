@@ -15,6 +15,7 @@ export class GoogleBooksService {
 
     /**
      * Search for books using Google Books API
+     * Restricts to English language books by default
      */
     static async searchBooks(query: string, maxResults: number = 10): Promise<any[]> {
         if (!this.isEnabled()) {
@@ -23,7 +24,8 @@ export class GoogleBooksService {
         }
 
         try {
-            const url = `${GOOGLE_BOOKS_API}/volumes?q=${encodeURIComponent(query)}&key=${API_KEY}&maxResults=${maxResults}`;
+            // Restrict to English language books
+            const url = `${GOOGLE_BOOKS_API}/volumes?q=${encodeURIComponent(query)}&key=${API_KEY}&maxResults=${maxResults}&langRestrict=en`;
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);

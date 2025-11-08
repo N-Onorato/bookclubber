@@ -11,10 +11,15 @@ const USER_AGENT = 'dataDumperBookClub/1.0 (n_onorato@outlook.com)';
 export class BookService {
     /**
      * Search for books using Open Library API
+     * Restricts to English language books by default
      */
     static async searchBooks(query: string, limit: number = 10): Promise<any[]> {
         try {
-            const url = `${OPEN_LIBRARY_API}/search.json?q=${encodeURIComponent(query)}&limit=${limit}`;
+            // Request specific fields including ISBN, and filter to English language
+            // Language filter is added to the query string as 'language:eng'
+            const fields = 'key,title,author_name,isbn,first_publish_year,number_of_pages_median,cover_i,first_sentence,language';
+            const enhancedQuery = `${query} language:eng`;
+            const url = `${OPEN_LIBRARY_API}/search.json?q=${encodeURIComponent(enhancedQuery)}&limit=${limit}&fields=${fields}`;
 
             const response = await fetch(url, {
                 headers: {
@@ -34,12 +39,15 @@ export class BookService {
                 title: doc.title,
                 author: doc.author_name?.[0] || 'Unknown',
                 isbn: doc.isbn?.[0],
+                isbn10: doc.isbn?.find((i: string) => i.length === 10),
+                isbn13: doc.isbn?.find((i: string) => i.length === 13),
                 publishYear: doc.first_publish_year,
                 pageCount: doc.number_of_pages_median,
                 coverImageUrl: doc.cover_i
                     ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`
                     : null,
-                description: doc.first_sentence?.[0] || null
+                description: doc.first_sentence?.[0] || null,
+                language: doc.language?.[0] || 'eng'
             }));
         } catch (error) {
             console.error('Error searching books:', error);
@@ -76,9 +84,16 @@ export class BookService {
 
                 // Try to find matching Google Books result
                 const matchingGoogle = googleResults.find((gBook) => {
-                    // Match by title (case-insensitive, fuzzy)
+                    // Priority 1: Match by ISBN (most reliable)
+                    if (olBook.isbn13 && gBook.isbn13 && olBook.isbn13 === gBook.isbn13) {
+                        return true;
+                    }
+                    if (olBook.isbn10 && gBook.isbn10 && olBook.isbn10 === gBook.isbn10) {
+                        return true;
+                    }
+
+                    // Priority 2: Fuzzy match by title + author
                     const titleMatch = this.fuzzyTitleMatch(olBook.title, gBook.title);
-                    // Also check author if available
                     const authorMatch = olBook.author && gBook.author
                         ? this.fuzzyAuthorMatch(olBook.author, gBook.author)
                         : true; // If no author data, rely on title match
@@ -98,8 +113,8 @@ export class BookService {
                         language: matchingGoogle.language,
                         categories: matchingGoogle.categories,
                         isbn: enrichedBook.isbn || matchingGoogle.isbn,
-                        isbn10: matchingGoogle.isbn10,
-                        isbn13: matchingGoogle.isbn13,
+                        isbn10: enrichedBook.isbn10 || matchingGoogle.isbn10,
+                        isbn13: enrichedBook.isbn13 || matchingGoogle.isbn13,
                         googleBooksId: matchingGoogle.googleBooksId,
                     };
                     processedGoogleIds.add(matchingGoogle.googleBooksId);
