@@ -5,13 +5,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ReadingSection from '@/app/components/ReadingSection';
 import AdminSectionManager from '@/app/components/AdminSectionManager';
-import type { ReadingSectionWithDetails, User } from '@/lib/types';
+import type { ReadingSectionWithDetails, User, CycleContext } from '@/lib/types';
 
 export default function ReadingPage() {
-    const [cycleContext, setCycleContext] = useState<any>(null);
+    const [cycleContext, setCycleContext] = useState<CycleContext | null>(null);
     const [sections, setSections] = useState<ReadingSectionWithDetails[]>([]);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         loadActiveCycle();
@@ -20,6 +21,7 @@ export default function ReadingPage() {
 
     const loadActiveCycle = async () => {
         try {
+            setError(null);
             const response = await fetch('/api/cycles/active');
             if (response.ok) {
                 const data = await response.json();
@@ -27,9 +29,13 @@ export default function ReadingPage() {
                 if (data.cycle?.id) {
                     loadSections(data.cycle.id);
                 }
+            } else {
+                const data = await response.json();
+                setError(data.error || 'Failed to load active cycle');
             }
-        } catch (error) {
-            console.error('Error loading active cycle:', error);
+        } catch (err) {
+            console.error('Error loading active cycle:', err);
+            setError(err instanceof Error ? err.message : 'Failed to load active cycle');
         } finally {
             setLoading(false);
         }
@@ -53,9 +59,12 @@ export default function ReadingPage() {
             if (response.ok) {
                 const data = await response.json();
                 setSections(data);
+            } else {
+                const data = await response.json();
+                console.error('Error loading sections:', data.error);
             }
-        } catch (error) {
-            console.error('Error loading sections:', error);
+        } catch (err) {
+            console.error('Error loading sections:', err);
         }
     };
 
@@ -92,6 +101,32 @@ export default function ReadingPage() {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-foreground">Loading...</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen p-8">
+                <div className="max-w-6xl mx-auto">
+                    <Link href="/dashboard" className="text-accent hover:underline text-sm mb-4 block">
+                        ← Back to Dashboard
+                    </Link>
+                    <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-xl">
+                        <h2 className="text-xl font-semibold text-red-400 mb-2">Error Loading Page</h2>
+                        <p className="text-foreground/70 mb-4">{error}</p>
+                        <button
+                            onClick={() => {
+                                setError(null);
+                                setLoading(true);
+                                loadActiveCycle();
+                            }}
+                            className="px-4 py-2 bg-accent/20 border border-accent rounded-lg text-foreground hover:bg-accent/30 transition-colors"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -214,14 +249,6 @@ export default function ReadingPage() {
                                 <h3 className="text-2xl font-serif font-semibold text-foreground">
                                     Reading Schedule
                                 </h3>
-                            </div>
-
-                            {/* Debug info */}
-                            <div className="p-4 bg-blue-500/10 border border-blue-500/50 rounded-lg">
-                                <p className="text-blue-400 text-xs font-mono">
-                                    Debug: currentUser.role = {currentUser?.role || 'null'},
-                                    cycleContext.cycle.id = {cycleContext?.cycle?.id || 'null'}
-                                </p>
                             </div>
 
                             {/* Admin Section Manager */}
