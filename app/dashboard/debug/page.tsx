@@ -11,6 +11,14 @@ interface TestResult {
     error?: string;
     found?: boolean;
     result?: any;
+    enrichmentAnalysis?: Array<{
+        title: string;
+        source: string;
+        hasDescription: boolean;
+        hasPageCount: boolean;
+        hasPublisher: boolean;
+        hasCategories: boolean;
+    }>;
 }
 
 interface DebugData {
@@ -242,12 +250,56 @@ function TestResultCard({ testName, result }: { testName: string; result: TestRe
                 )}
             </div>
 
-            {expanded && (result.results || result.result) && (
-                <div className="border-t border-zinc-700 p-6 bg-zinc-900/50">
-                    <h4 className="text-sm font-semibold text-zinc-300 mb-3">Raw Response:</h4>
-                    <pre className="bg-zinc-950 p-4 rounded overflow-x-auto text-xs text-zinc-300 max-h-96 overflow-y-auto">
-                        {JSON.stringify(result.results || result.result, null, 2)}
-                    </pre>
+            {expanded && (
+                <div className="border-t border-zinc-700 p-6 bg-zinc-900/50 space-y-6">
+                    {/* Enrichment Analysis (for unified search) */}
+                    {result.enrichmentAnalysis && result.enrichmentAnalysis.length > 0 && (
+                        <div>
+                            <h4 className="text-sm font-semibold text-zinc-300 mb-3">Data Enrichment Summary:</h4>
+                            <div className="space-y-2">
+                                {result.enrichmentAnalysis.map((item, idx) => (
+                                    <div key={idx} className="bg-zinc-950 p-3 rounded">
+                                        <div className="flex items-start justify-between mb-2">
+                                            <span className="text-zinc-200 font-medium">{item.title}</span>
+                                            <span className={`text-xs px-2 py-1 rounded ${
+                                                item.source.includes('+')
+                                                    ? 'bg-green-900/30 text-green-400'
+                                                    : item.source.includes('Google')
+                                                    ? 'bg-blue-900/30 text-blue-400'
+                                                    : 'bg-zinc-800 text-zinc-400'
+                                            }`}>
+                                                {item.source}
+                                            </span>
+                                        </div>
+                                        <div className="flex gap-2 text-xs">
+                                            <span className={item.hasDescription ? 'text-green-400' : 'text-red-400'}>
+                                                {item.hasDescription ? '✓' : '✗'} Description
+                                            </span>
+                                            <span className={item.hasPageCount ? 'text-green-400' : 'text-red-400'}>
+                                                {item.hasPageCount ? '✓' : '✗'} Pages
+                                            </span>
+                                            <span className={item.hasPublisher ? 'text-green-400' : 'text-red-400'}>
+                                                {item.hasPublisher ? '✓' : '✗'} Publisher
+                                            </span>
+                                            <span className={item.hasCategories ? 'text-green-400' : 'text-red-400'}>
+                                                {item.hasCategories ? '✓' : '✗'} Categories
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Raw Response */}
+                    {(result.results || result.result) && (
+                        <div>
+                            <h4 className="text-sm font-semibold text-zinc-300 mb-3">Raw Response:</h4>
+                            <pre className="bg-zinc-950 p-4 rounded overflow-x-auto text-xs text-zinc-300 max-h-96 overflow-y-auto">
+                                {JSON.stringify(result.results || result.result, null, 2)}
+                            </pre>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

@@ -96,10 +96,30 @@ export async function GET(request: NextRequest) {
         try {
             const unifiedStart = Date.now();
             const unifiedResults = await BookService.searchBooksUnified(query, 5);
+
+            // Analyze enrichment
+            const enrichmentAnalysis = unifiedResults.map((book: any) => {
+                const hasOpenLibraryId = !!book.openLibraryId;
+                const hasGoogleBooksId = !!book.googleBooksId;
+                const enriched = hasOpenLibraryId && hasGoogleBooksId;
+
+                return {
+                    title: book.title,
+                    source: enriched ? 'Open Library + Google Books' :
+                            hasGoogleBooksId ? 'Google Books only' :
+                            'Open Library only',
+                    hasDescription: !!book.description,
+                    hasPageCount: !!book.pageCount,
+                    hasPublisher: !!book.publisher,
+                    hasCategories: !!book.categories && book.categories.length > 0,
+                };
+            });
+
             results.tests.unifiedSearch = {
                 success: true,
                 duration: Date.now() - unifiedStart,
                 resultCount: unifiedResults.length,
+                enrichmentAnalysis,
                 results: unifiedResults,
             };
         } catch (error: any) {

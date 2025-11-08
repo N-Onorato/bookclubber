@@ -50,31 +50,68 @@ export class BookService {
     /**
      * Search for books using both Open Library and Google Books (with fallback)
      * Tries Open Library first, then falls back to Google Books if needed
+     * Enriches Open Library results with Google Books data when available
      */
     static async searchBooksUnified(query: string, limit: number = 10): Promise<any[]> {
         // Try Open Library first
         const openLibraryResults = await this.searchBooks(query, limit);
 
-        // If we have good results from Open Library, use them
-        if (openLibraryResults.length >= 3) {
+        // If we have good results from Open Library and Google Books is disabled, return them
+        if (openLibraryResults.length >= 3 && !GoogleBooksService.isEnabled()) {
             return openLibraryResults;
         }
 
-        // If Open Library returned few/no results and Google Books is enabled, try it
+        // If Google Books is enabled, try it (either to enrich or as fallback)
         if (GoogleBooksService.isEnabled()) {
-            console.log('Open Library returned limited results, trying Google Books as fallback...');
+            console.log('Fetching Google Books data to enrich/supplement results...');
             const googleResults = await GoogleBooksService.searchBooks(query, limit);
 
-            // Merge results, prioritizing Open Library
-            const mergedResults = [...openLibraryResults];
-            const openLibraryTitles = new Set(
-                openLibraryResults.map((r) => r.title?.toLowerCase())
-            );
+            // Merge and enrich results
+            const mergedResults: any[] = [];
+            const processedGoogleIds = new Set<string>();
 
-            // Add Google Books results that aren't already in Open Library results
-            for (const googleResult of googleResults) {
-                if (!openLibraryTitles.has(googleResult.title?.toLowerCase())) {
-                    mergedResults.push(googleResult);
+            // First pass: enrich Open Library results with Google Books data
+            for (const olBook of openLibraryResults) {
+                let enrichedBook = { ...olBook };
+
+                // Try to find matching Google Books result
+                const matchingGoogle = googleResults.find((gBook) => {
+                    // Match by title (case-insensitive, fuzzy)
+                    const titleMatch = this.fuzzyTitleMatch(olBook.title, gBook.title);
+                    // Also check author if available
+                    const authorMatch = olBook.author && gBook.author
+                        ? this.fuzzyAuthorMatch(olBook.author, gBook.author)
+                        : true; // If no author data, rely on title match
+
+                    return titleMatch && authorMatch;
+                });
+
+                if (matchingGoogle) {
+                    // Enrich Open Library data with Google Books data
+                    enrichedBook = {
+                        ...enrichedBook,
+                        // Fill in missing fields from Google Books
+                        description: enrichedBook.description || matchingGoogle.description,
+                        pageCount: enrichedBook.pageCount || matchingGoogle.pageCount,
+                        coverImageUrl: enrichedBook.coverImageUrl || matchingGoogle.coverImageUrl,
+                        publisher: matchingGoogle.publisher,
+                        language: matchingGoogle.language,
+                        categories: matchingGoogle.categories,
+                        isbn: enrichedBook.isbn || matchingGoogle.isbn,
+                        isbn10: matchingGoogle.isbn10,
+                        isbn13: matchingGoogle.isbn13,
+                        googleBooksId: matchingGoogle.googleBooksId,
+                    };
+                    processedGoogleIds.add(matchingGoogle.googleBooksId);
+                }
+
+                mergedResults.push(enrichedBook);
+            }
+
+            // Second pass: add Google Books results that didn't match any Open Library results
+            for (const gBook of googleResults) {
+                if (!processedGoogleIds.has(gBook.googleBooksId)) {
+                    mergedResults.push(gBook);
                 }
             }
 
@@ -82,6 +119,44 @@ export class BookService {
         }
 
         return openLibraryResults;
+    }
+
+    /**
+     * Fuzzy title matching - handles minor variations
+     */
+    private static fuzzyTitleMatch(title1: string, title2: string): boolean {
+        if (!title1 || !title2) return false;
+
+        // Normalize: lowercase, remove punctuation, trim whitespace
+        const normalize = (str: string) =>
+            str.toLowerCase()
+               .replace(/[^\w\s]/g, '')
+               .replace(/\s+/g, ' ')
+               .trim();
+
+        const t1 = normalize(title1);
+        const t2 = normalize(title2);
+
+        // Check if one title contains the other (handles subtitle variations)
+        return t1.includes(t2) || t2.includes(t1) || t1 === t2;
+    }
+
+    /**
+     * Fuzzy author matching - handles name variations
+     */
+    private static fuzzyAuthorMatch(author1: string, author2: string): boolean {
+        if (!author1 || !author2) return false;
+
+        const normalize = (str: string) =>
+            str.toLowerCase()
+               .replace(/[^\w\s]/g, '')
+               .trim();
+
+        const a1 = normalize(author1);
+        const a2 = normalize(author2);
+
+        // Check if authors match (handles "Frank Herbert" vs "Herbert, Frank")
+        return a1.includes(a2) || a2.includes(a1) || a1 === a2;
     }
 
     /**

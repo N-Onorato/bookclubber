@@ -44,8 +44,16 @@ patterns and gotchas. Keep it under 300 lines.
 ### Google Books Integration ⚠️
 
 - **Location**: [lib/services/googleBooksService.ts](lib/services/googleBooksService.ts)
-- **Fallback Strategy**: Open Library first, Google Books if <3 results
-- **API Endpoint**: `/api/books/search` uses `searchBooksUnified()` for automatic fallback
+- **Enrichment Strategy**: Open Library first, then enriched with Google Books data
+  - Fetches from both APIs when Google Books is enabled
+  - Matches books using fuzzy title + author matching
+  - Enriches Open Library results with Google Books metadata (descriptions, page counts, publishers, etc.)
+  - Adds non-matching Google Books results as additional options
+- **Matching Logic**: Uses fuzzy matching (case-insensitive, punctuation-removed)
+  - Title matching: Handles subtitles and variations ("Dune" matches "Dune: A Novel")
+  - Author matching: Handles "Frank Herbert" vs "Herbert, Frank" formats
+  - No ISBN matching in search (Open Library search API doesn't return ISBNs reliably)
+- **API Endpoint**: `/api/books/search` uses `searchBooksUnified()` for automatic enrichment
 - **Environment Variables**:
   - `GOOGLE_API_KEY` - Enables Google Books API integration
   - `ENABLE_DEBUG_FEATURES` - Shows debug console at `/dashboard/debug`
@@ -54,9 +62,10 @@ patterns and gotchas. Keep it under 300 lines.
   - Test searches from both Open Library and Google Books
   - View raw API responses and timing data
   - Test ISBN searches and unified fallback logic
+  - **Enrichment Analysis**: Shows which data came from which source for each book
 - **Book Fields**: Added `publisher`, `language`, `categories`, `isbn_10`, `isbn_13`, `google_books_id`
 - **Methods**:
-  - `BookService.searchBooksUnified()` - Use this for all searches (has fallback)
+  - `BookService.searchBooksUnified()` - Use this for all searches (has enrichment)
   - `BookService.enrichBookFromGoogle()` - Enrich existing book with Google data
   - `BookService.validateBook()` - Validate book metadata (best effort)
 
