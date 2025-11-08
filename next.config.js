@@ -2,9 +2,11 @@
 const nextConfig = {
   // Configure images for local and external covers
   images: {
-    domains: ['covers.openlibrary.org'],
-    // Allow local API routes to serve images
     remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'covers.openlibrary.org',
+      },
       {
         protocol: 'http',
         hostname: 'localhost',
