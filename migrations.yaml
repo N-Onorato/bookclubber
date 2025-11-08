@@ -701,3 +701,51 @@ migrations:
       BEGIN
         UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
       END;
+
+  - version: 9
+    name: "Add Google Books metadata fields"
+    description: "Add additional metadata fields to support Google Books API integration: publisher, language, categories, separate ISBN fields, and Google Books ID"
+    reversible: true
+    up: |
+      -- Add Google Books metadata fields to books table
+      ALTER TABLE books ADD COLUMN publisher TEXT;
+      ALTER TABLE books ADD COLUMN language TEXT;
+      ALTER TABLE books ADD COLUMN categories TEXT; -- JSON array of genres/subjects
+      ALTER TABLE books ADD COLUMN isbn_10 TEXT;
+      ALTER TABLE books ADD COLUMN isbn_13 TEXT;
+      ALTER TABLE books ADD COLUMN google_books_id TEXT;
+
+      -- Create index for Google Books ID lookups
+      CREATE INDEX idx_books_google_books_id ON books(google_books_id);
+
+      -- Migrate existing ISBN values to isbn_13 (most modern ISBNs are 13-digit)
+      UPDATE books SET isbn_13 = isbn WHERE isbn IS NOT NULL AND LENGTH(isbn) = 13;
+      UPDATE books SET isbn_10 = isbn WHERE isbn IS NOT NULL AND LENGTH(isbn) = 10;
+    down: |
+      -- Drop the index
+      DROP INDEX IF EXISTS idx_books_google_books_id;
+
+      -- SQLite doesn't support DROP COLUMN, so we recreate the table
+      -- Backup existing data
+      CREATE TABLE books_backup AS
+      SELECT
+        id, title, author, isbn, cover_url, description, page_count, publication_date,
+        is_series, series_name, series_position, suggested_by_user_id, suggestion_phase_id,
+        status, completed_at, source, source_id, local_cover_path, original_cover_url,
+        created_at, updated_at, deleted_at
+      FROM books;
+
+      DROP TABLE books;
+      ALTER TABLE books_backup RENAME TO books;
+
+      -- Recreate indexes and triggers
+      CREATE INDEX idx_books_source ON books(source, source_id);
+      CREATE INDEX idx_books_status ON books(status);
+      CREATE INDEX idx_books_deleted_at ON books(deleted_at);
+
+      CREATE TRIGGER update_books_updated_at
+        AFTER UPDATE ON books
+        FOR EACH ROW
+      BEGIN
+        UPDATE books SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+      END;

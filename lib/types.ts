@@ -36,6 +36,11 @@ export interface Book {
     is_series: boolean;
     series_name?: string;
     series_position?: number;
+    publisher?: string;
+    language?: string;
+    categories?: string; // JSON array of genres/subjects
+    isbn_10?: string;
+    isbn_13?: string;
 
     // Tracking
     suggested_by_user_id?: string;
@@ -50,6 +55,7 @@ export interface Book {
     source_id?: string;
     local_cover_path?: string;
     original_cover_url?: string;
+    google_books_id?: string;
 
     // System
     created_at: string;
@@ -271,6 +277,35 @@ export interface OpenLibraryBook {
     first_publish_year?: number;
     number_of_pages_median?: number;
     subtitle?: string;
+}
+
+// Google Books API types
+export interface GoogleBooksVolume {
+    id: string;
+    volumeInfo: {
+        title: string;
+        subtitle?: string;
+        authors?: string[];
+        publisher?: string;
+        publishedDate?: string;
+        description?: string;
+        pageCount?: number;
+        categories?: string[];
+        imageLinks?: {
+            thumbnail?: string;
+            smallThumbnail?: string;
+        };
+        language?: string;
+        industryIdentifiers?: Array<{
+            type: 'ISBN_10' | 'ISBN_13' | string;
+            identifier: string;
+        }>;
+    };
+}
+
+export interface GoogleBooksSearchResponse {
+    totalItems: number;
+    items?: GoogleBooksVolume[];
 }
 
 export interface BookSearchResult {

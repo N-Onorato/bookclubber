@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { getDatabase } from '../db/connection';
 import { Book } from '../types';
 import { ImageService } from './imageService';
+import { GoogleBooksService } from './googleBooksService';
 
 // Open Library API configuration
 const OPEN_LIBRARY_API = 'https://openlibrary.org';
@@ -44,6 +45,43 @@ export class BookService {
             console.error('Error searching books:', error);
             return [];
         }
+    }
+
+    /**
+     * Search for books using both Open Library and Google Books (with fallback)
+     * Tries Open Library first, then falls back to Google Books if needed
+     */
+    static async searchBooksUnified(query: string, limit: number = 10): Promise<any[]> {
+        // Try Open Library first
+        const openLibraryResults = await this.searchBooks(query, limit);
+
+        // If we have good results from Open Library, use them
+        if (openLibraryResults.length >= 3) {
+            return openLibraryResults;
+        }
+
+        // If Open Library returned few/no results and Google Books is enabled, try it
+        if (GoogleBooksService.isEnabled()) {
+            console.log('Open Library returned limited results, trying Google Books as fallback...');
+            const googleResults = await GoogleBooksService.searchBooks(query, limit);
+
+            // Merge results, prioritizing Open Library
+            const mergedResults = [...openLibraryResults];
+            const openLibraryTitles = new Set(
+                openLibraryResults.map((r) => r.title?.toLowerCase())
+            );
+
+            // Add Google Books results that aren't already in Open Library results
+            for (const googleResult of googleResults) {
+                if (!openLibraryTitles.has(googleResult.title?.toLowerCase())) {
+                    mergedResults.push(googleResult);
+                }
+            }
+
+            return mergedResults.slice(0, limit);
+        }
+
+        return openLibraryResults;
     }
 
     /**
@@ -114,7 +152,7 @@ export class BookService {
      * Create or update a book in the database
      */
     static async createOrUpdateBook(bookData: {
-        source: string;  // e.g., 'openlibrary', 'goodreads', 'manual'
+        source: string;  // e.g., 'openlibrary', 'google', 'manual'
         sourceId: string;  // The ID from that source
         title: string;
         author: string;
@@ -123,6 +161,13 @@ export class BookService {
         pageCount?: number;
         coverImageUrl?: string;
         description?: string;
+        // New Google Books fields
+        publisher?: string;
+        language?: string;
+        categories?: string[];
+        isbn10?: string;
+        isbn13?: string;
+        googleBooksId?: string;
     }): Promise<Book> {
         const db = getDatabase();
 
@@ -139,18 +184,23 @@ export class BookService {
             localCoverPath = await ImageService.downloadAndSaveImage(bookData.coverImageUrl, bookId);
         }
 
+        // Serialize categories if provided
+        const categoriesJson = bookData.categories ? JSON.stringify(bookData.categories) : null;
+
         if (existingBook) {
             // Update existing book
             db.prepare(`
                 UPDATE books
                 SET title = ?, author = ?, isbn = ?, publication_date = ?,
                     page_count = ?, cover_url = ?, description = ?, updated_at = ?,
-                    local_cover_path = ?, original_cover_url = ?
+                    local_cover_path = ?, original_cover_url = ?,
+                    publisher = ?, language = ?, categories = ?,
+                    isbn_10 = ?, isbn_13 = ?, google_books_id = ?
                 WHERE id = ?
             `).run(
                 bookData.title,
                 bookData.author,
-                bookData.isbn || null,
+                bookData.isbn || bookData.isbn13 || bookData.isbn10 || null,
                 bookData.publishYear ? `${bookData.publishYear}-01-01` : null,
                 bookData.pageCount || null,
                 bookData.coverImageUrl || null,
@@ -158,6 +208,12 @@ export class BookService {
                 now,
                 localCoverPath,
                 bookData.coverImageUrl || null,
+                bookData.publisher || null,
+                bookData.language || null,
+                categoriesJson,
+                bookData.isbn10 || null,
+                bookData.isbn13 || null,
+                bookData.googleBooksId || null,
                 existingBook.id
             );
 
@@ -170,16 +226,17 @@ export class BookService {
                 INSERT INTO books (
                     id, source, source_id, title, author, isbn, publication_date,
                     page_count, cover_url, description, status, created_at, updated_at,
-                    local_cover_path, original_cover_url
+                    local_cover_path, original_cover_url,
+                    publisher, language, categories, isbn_10, isbn_13, google_books_id
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'suggested', ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'suggested', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
                 bookId,
                 bookData.source,
                 bookData.sourceId,
                 bookData.title,
                 bookData.author,
-                bookData.isbn || null,
+                bookData.isbn || bookData.isbn13 || bookData.isbn10 || null,
                 bookData.publishYear ? `${bookData.publishYear}-01-01` : null,
                 bookData.pageCount || null,
                 bookData.coverImageUrl || null,
@@ -187,7 +244,13 @@ export class BookService {
                 now,
                 now,
                 localCoverPath,
-                bookData.coverImageUrl || null
+                bookData.coverImageUrl || null,
+                bookData.publisher || null,
+                bookData.language || null,
+                categoriesJson,
+                bookData.isbn10 || null,
+                bookData.isbn13 || null,
+                bookData.googleBooksId || null
             );
 
             return db.prepare('SELECT * FROM books WHERE id = ?').get(bookId) as Book;
@@ -457,5 +520,96 @@ export class BookService {
             SET deleted_at = ?, updated_at = ?
             WHERE id = ?
         `).run(now, now, bookId);
+    }
+
+    /**
+     * Enrich a book with data from Google Books
+     * Fetches additional metadata and updates the book record
+     */
+    static async enrichBookFromGoogle(bookId: string): Promise<Book | null> {
+        const book = await this.getBookById(bookId);
+        if (!book) {
+            return null;
+        }
+
+        if (!GoogleBooksService.isEnabled()) {
+            console.warn('Google Books API not enabled');
+            return book;
+        }
+
+        // Fetch Google Books data
+        const googleData = await GoogleBooksService.enrichBookData({
+            title: book.title,
+            author: book.author,
+            isbn: book.isbn,
+        });
+
+        if (!googleData) {
+            console.log('No Google Books data found for book:', book.title);
+            return book;
+        }
+
+        // Update book with Google Books data (only fill in missing fields)
+        const db = getDatabase();
+        const now = new Date().toISOString();
+
+        const categoriesJson = googleData.categories ? JSON.stringify(googleData.categories) : null;
+
+        db.prepare(`
+            UPDATE books
+            SET publisher = COALESCE(publisher, ?),
+                language = COALESCE(language, ?),
+                categories = COALESCE(categories, ?),
+                isbn_10 = COALESCE(isbn_10, ?),
+                isbn_13 = COALESCE(isbn_13, ?),
+                google_books_id = COALESCE(google_books_id, ?),
+                page_count = COALESCE(page_count, ?),
+                description = COALESCE(description, ?),
+                updated_at = ?
+            WHERE id = ?
+        `).run(
+            googleData.publisher || null,
+            googleData.language || null,
+            categoriesJson,
+            googleData.isbn10 || null,
+            googleData.isbn13 || null,
+            googleData.googleBooksId || null,
+            googleData.pageCount || null,
+            googleData.description || null,
+            now,
+            bookId
+        );
+
+        return db.prepare('SELECT * FROM books WHERE id = ?').get(bookId) as Book;
+    }
+
+    /**
+     * Validate a book's metadata against Google Books
+     */
+    static async validateBook(bookId: string): Promise<{
+        valid: boolean;
+        warnings: string[];
+    }> {
+        const book = await this.getBookById(bookId);
+        if (!book) {
+            return { valid: false, warnings: ['Book not found'] };
+        }
+
+        if (!GoogleBooksService.isEnabled()) {
+            return { valid: true, warnings: ['Google Books API not enabled - skipping validation'] };
+        }
+
+        const validation = await GoogleBooksService.validateBook({
+            title: book.title,
+            author: book.author,
+            isbn: book.isbn,
+            publishYear: book.publication_date ? new Date(book.publication_date).getFullYear() : undefined,
+            pageCount: book.page_count || undefined,
+        });
+
+        return {
+            valid: validation.valid,
+            warnings: validation.warnings,
+        };
     }
 }
